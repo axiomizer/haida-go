@@ -68,8 +68,9 @@ class TestNeuralNet(unittest.TestCase):
 
     def test_conv_block_sgd(self):
         class LastLayer:
-            def sgd(self, in_activations, target_policies, target_values):
-                return [-2*(target_policies[i] - in_activations[i]) for i in range(len(in_activations))]
+            @staticmethod
+            def sgd(a, pi, _):
+                return [-2*(pi[i] - a[i]) for i in range(len(a))]
 
         conv = nn.ConvolutionalBlock(2, 2)
         k11 = np.array([[-1., -2., 3.], [1., 3., -1.], [-1., 0., 0.]])
@@ -112,3 +113,19 @@ class TestNeuralNet(unittest.TestCase):
         # check biases
         self.assertTrue(conv.biases[0] == 2 - nn.LEARNING_RATE * 96)
         self.assertTrue(conv.biases[1] == -1 - nn.LEARNING_RATE * 66)
+
+    def test_res_block_sgd(self):
+        class LastLayer:
+            @staticmethod
+            def sgd(a, pi, _):
+                return [-2*(pi[i] - a[i]) for i in range(len(a))]
+
+        res = nn.ResidualBlock(2)
+        res.to = [LastLayer()]
+        in_activations = [np.array([[[-2, 1, -2], [-3, 3, 3], [-3, -2, 2]], [[0, 1, 0], [-3, 1, 3], [-1, -3, -3]]])]
+        target_policies = [np.array([[[0, 2, 0], [1, 3, 2], [3, 3, 0]], [[2, 2, 1], [3, 2, 1], [1, 2, 0]]])]
+        res.sgd(in_activations, target_policies, None)
+        # TODO: finish implementing this
+
+    # TODO: test_conv_block_feedforward
+    # TODO: test_res_block_feedforward
