@@ -4,10 +4,9 @@ RESIDUAL_BLOCKS = 3  # 19
 INPUT_PLANES = 7  # 17
 FILTERS = 16  # 256
 BOARD_SIZE = 9  # 19
+LEARNING_RATE = 0.001  # alpha go zero uses annealing (extended data table 3)
 
 
-# TODO: test this for overhangs other than 1 and for arr2 with even h/w and for arrays with differing h/w
-# already tested arr1 with even h/w
 def convolve(arr1, arr2, overhang=1):
     arr1_shape = np.shape(arr1)
     arr2_shape = np.shape(arr2)
@@ -43,6 +42,8 @@ def rectify(z):
 
 
 class ConvolutionalBlock:
+    in_filters = None
+    out_filters = None
     to = None
     kernels = []
     biases = []
@@ -58,7 +59,7 @@ class ConvolutionalBlock:
         for in_a in in_activations:
             conv = convolve_all_kernels(in_a, self.kernels)
             for f in range(self.out_filters):
-                conv += self.biases[f]
+                conv[f] += self.biases[f]
             z.append(conv)
         a = []
         for i in range(len(z)):
@@ -69,13 +70,25 @@ class ConvolutionalBlock:
         dc_da_prev = []
         for dc_dz_example in dc_dz:
             dc_da_prev.append(convolve_all_kernels(dc_dz_example, invert_kernels(self.kernels)))
-        dc_dw = []
-        for i in range(len(in_activations)):
-            dc_dw.append(convolve(in_activations[i], dc_dz[i]))
-            # TODO: is this right? continue from here. update weights and biases
+        self.update_params(in_activations, dc_dz)
         return dc_da_prev
-    # TODO: L2 regularization
-    # TODO: Batch Norm (can get rid of biases once this is implemented)
+        # TODO: L2 regularization
+        # TODO: Batch Norm (can get rid of biases once this is implemented)
+
+    def update_params(self, in_activations, dc_dz):
+        # weights
+        for i in range(self.in_filters):
+            for j in range(self.out_filters):
+                dc_dw = np.zeros((3, 3))
+                for x in range(len(in_activations)):
+                    dc_dw += convolve(in_activations[x][i], dc_dz[x][j])
+                self.kernels[i][j] -= (LEARNING_RATE / len(in_activations)) * dc_dw
+        # biases
+        for i in range(self.out_filters):
+            dc_db = 0
+            for x in range(len(in_activations)):
+                dc_db += np.sum(dc_dz[x][i])
+            self.biases[i] -= (LEARNING_RATE / len(in_activations)) * dc_db
 
 
 class ResidualBlock:

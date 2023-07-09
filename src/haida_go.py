@@ -1,6 +1,6 @@
 import evaluator
 import MCTS
-from neuralNet import NeuralNet
+from neural_net import NeuralNet
 import random
 
 BATCH_SIZE = 20  # 2048
