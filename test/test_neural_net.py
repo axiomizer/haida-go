@@ -121,11 +121,68 @@ class TestNeuralNet(unittest.TestCase):
                 return [-2*(pi[i] - a[i]) for i in range(len(a))]
 
         res = nn.ResidualBlock(2)
+        k1_11 = np.array([[-2., -2., -3.], [-2., 3., -1.], [-3., 0., -3.]])
+        k1_12 = np.array([[1., 2., -2.], [2., -1., 0.], [1., 2., -1.]])
+        k1_21 = np.array([[-1., 3., 2.], [-3., -3., -1.], [3., 1., -1.]])
+        k1_22 = np.array([[1., 2., -2.], [2., -1., 0.], [-3., -1., 0.]])
+        res.kernels1 = [[np.copy(k1_11), np.copy(k1_12)], [np.copy(k1_21), np.copy(k1_22)]]
+        res.biases1 = [1, -2]
+        k2_11 = np.array([[1., 1., 2.], [-2., 3., -3.], [-2., -3., -2.]])
+        k2_12 = np.array([[-3., 2., 2.], [2., -1., -2.], [0., -1., -3.]])
+        k2_21 = np.array([[-2., -1., -1.], [2., -2., -2.], [1., 2., 1.]])
+        k2_22 = np.array([[1., 0., -1.], [-3., 2., -2.], [-3., 2., -3.]])
+        res.kernels2 = [[np.copy(k2_11), np.copy(k2_12)], [np.copy(k2_21), np.copy(k2_22)]]
+        res.biases2 = [-1, 1]
         res.to = [LastLayer()]
-        in_activations = [np.array([[[-2, 1, -2], [-3, 3, 3], [-3, -2, 2]], [[0, 1, 0], [-3, 1, 3], [-1, -3, -3]]])]
-        target_policies = [np.array([[[0, 2, 0], [1, 3, 2], [3, 3, 0]], [[2, 2, 1], [3, 2, 1], [1, 2, 0]]])]
-        res.sgd(in_activations, target_policies, None)
-        # TODO: finish implementing this
+        in_activations = [np.array([[[1, 0, 2], [0, 0, 1], [3, 1, 3]], [[0, 0, 3], [2, 1, 1], [1, -1, 1]]])]
+        target_policies = [np.array([[[2, 1, 0], [0, 2, 0], [1, 3, 3]], [[0, 3, 0], [3, 2, 3], [1, 1, 0]]])]
+        dc_da = res.sgd(in_activations, target_policies, None)
 
-    # TODO: test_conv_block_feedforward
-    # TODO: test_res_block_feedforward
+        # check dc_da
+        expected_result = np.array([[[380, -274, 1314],
+                                     [-572, -1286, -226],
+                                     [648, 30, 770]],
+                                    [[-242, -488, 32],
+                                     [686, 1388, 238],
+                                     [-886, -1162, -436]]])
+        self.assertTrue(np.allclose(dc_da, expected_result))
+        # check kernels
+        expected_dc_dk1_11 = np.array([[0, 46, 0],
+                                       [46, 1356, 232],
+                                       [0, 212, 0]])
+        expected_dc_dk1_12 = np.array([[0, 622, -82],
+                                       [-246, 216, -246],
+                                       [298, 972, 26]])
+        expected_dc_dk1_21 = np.array([[46, 510, 232],
+                                       [-46, 914, -232],
+                                       [212, 408, 98]])
+        expected_dc_dk1_22 = np.array([[-164, 812, -82],
+                                       [216, 432, -56],
+                                       [-298, 324, -26]])
+        self.assertTrue(len(res.kernels1) == 2 and len(res.kernels1[0]) == 2 and len(res.kernels1[1]) == 2)
+        self.assertTrue(np.array_equal(res.kernels1[0][0], k1_11 - nn.LEARNING_RATE * expected_dc_dk1_11))
+        self.assertTrue(np.array_equal(res.kernels1[0][1], k1_12 - nn.LEARNING_RATE * expected_dc_dk1_12))
+        self.assertTrue(np.array_equal(res.kernels1[1][0], k1_21 - nn.LEARNING_RATE * expected_dc_dk1_21))
+        self.assertTrue(np.array_equal(res.kernels1[1][1], k1_22 - nn.LEARNING_RATE * expected_dc_dk1_22))
+        expected_dc_dk2_11 = np.array([[0, 0, 0],
+                                       [10, 1582, 4],
+                                       [0, 0, 0]])
+        expected_dc_dk2_12 = np.array([[0, 44, 0],
+                                       [300, 144, 160],
+                                       [0, 176, 0]])
+        expected_dc_dk2_21 = np.array([[0, 740, 0],
+                                       [216, 0, 384],
+                                       [4, 1462, 34]])
+        expected_dc_dk2_22 = np.array([[40, 0, 340],
+                                       [0, 494, 0],
+                                       [132, 1224, 0]])
+        self.assertTrue(len(res.kernels2) == 2 and len(res.kernels2[0]) == 2 and len(res.kernels2[1]) == 2)
+        self.assertTrue(np.array_equal(res.kernels2[0][0], k2_11 - nn.LEARNING_RATE * expected_dc_dk2_11))
+        self.assertTrue(np.array_equal(res.kernels2[0][1], k2_12 - nn.LEARNING_RATE * expected_dc_dk2_12))
+        self.assertTrue(np.array_equal(res.kernels2[1][0], k2_21 - nn.LEARNING_RATE * expected_dc_dk2_21))
+        self.assertTrue(np.array_equal(res.kernels2[1][1], k2_22 - nn.LEARNING_RATE * expected_dc_dk2_22))
+        # check biases
+        self.assertTrue(res.biases1[0] == 1 - nn.LEARNING_RATE * 588)
+        self.assertTrue(res.biases1[1] == -2 - nn.LEARNING_RATE * 242)
+        self.assertTrue(res.biases2[0] == -1 - nn.LEARNING_RATE * 218)
+        self.assertTrue(res.biases2[1] == 1 - nn.LEARNING_RATE * 114)
