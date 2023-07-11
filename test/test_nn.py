@@ -1,6 +1,8 @@
 import neural_net as nn
 import numpy as np
+import nn_util as util
 import unittest
+import hyperparams as hp
 
 
 class TestNeuralNet(unittest.TestCase):
@@ -16,7 +18,7 @@ class TestNeuralNet(unittest.TestCase):
                                     [-1, 3, 0, 0],
                                     [10, 12, 10, 0],
                                     [0, 0, -2, -1]])
-        self.assertTrue(np.array_equal(nn.convolve(arr1, arr2), expected_result))
+        self.assertTrue(np.array_equal(util.convolve(arr1, arr2), expected_result))
 
     def test_convolve_odd(self):
         arr1 = np.array([[1, 2, 3, 4, 5],
@@ -32,7 +34,7 @@ class TestNeuralNet(unittest.TestCase):
                                     [10, 19, 12, 13, -4],
                                     [-17, -6, 15, 17, 8],
                                     [0, -6, -5, 6, 8]])
-        self.assertTrue(np.array_equal(nn.convolve(arr1, arr2), expected_result))
+        self.assertTrue(np.array_equal(util.convolve(arr1, arr2), expected_result))
 
     def test_convolve_rectangle(self):
         arr1 = np.array([[3, 1, 0, 2, 0, 1, 1],
@@ -50,7 +52,7 @@ class TestNeuralNet(unittest.TestCase):
         expected_result = np.array([[17, 4, 11],
                                     [-18, 16, 6],
                                     [2, 24, -28]])
-        self.assertTrue(np.array_equal(nn.convolve(arr1, arr2), expected_result))
+        self.assertTrue(np.array_equal(util.convolve(arr1, arr2), expected_result))
 
     def test_convolve_overhang(self):
         arr1 = np.array([[0, 1, 3],
@@ -64,7 +66,7 @@ class TestNeuralNet(unittest.TestCase):
                                     [5, -7, -3, 2, -1],
                                     [-1, 2, 3, 8, -1],
                                     [-6, 6, -5, 9, 6]])
-        self.assertTrue(np.array_equal(nn.convolve(arr1, arr2, overhang=2), expected_result))
+        self.assertTrue(np.array_equal(util.convolve(arr1, arr2, overhang=2), expected_result))
 
     def test_conv_block_sgd(self):
         class LastLayer:
@@ -106,13 +108,13 @@ class TestNeuralNet(unittest.TestCase):
                                      [-126, 66, 126],
                                      [-114, -102, -54]])
         self.assertTrue(len(conv.kernels) == 2 and len(conv.kernels[0]) == 2 and len(conv.kernels[1]) == 2)
-        self.assertTrue(np.array_equal(conv.kernels[0][0], k11 - nn.LEARNING_RATE * expected_dc_dk11))
-        self.assertTrue(np.array_equal(conv.kernels[0][1], k12 - nn.LEARNING_RATE * expected_dc_dk12))
-        self.assertTrue(np.array_equal(conv.kernels[1][0], k21 - nn.LEARNING_RATE * expected_dc_dk21))
-        self.assertTrue(np.array_equal(conv.kernels[1][1], k22 - nn.LEARNING_RATE * expected_dc_dk22))
+        self.assertTrue(np.array_equal(conv.kernels[0][0], k11 - hp.LEARNING_RATE * expected_dc_dk11))
+        self.assertTrue(np.array_equal(conv.kernels[0][1], k12 - hp.LEARNING_RATE * expected_dc_dk12))
+        self.assertTrue(np.array_equal(conv.kernels[1][0], k21 - hp.LEARNING_RATE * expected_dc_dk21))
+        self.assertTrue(np.array_equal(conv.kernels[1][1], k22 - hp.LEARNING_RATE * expected_dc_dk22))
         # check biases
-        self.assertTrue(conv.biases[0] == 2 - nn.LEARNING_RATE * 96)
-        self.assertTrue(conv.biases[1] == -1 - nn.LEARNING_RATE * 66)
+        self.assertTrue(conv.biases[0] == 2 - hp.LEARNING_RATE * 96)
+        self.assertTrue(conv.biases[1] == -1 - hp.LEARNING_RATE * 66)
 
     def test_res_block_sgd(self):
         class LastLayer:
@@ -160,10 +162,10 @@ class TestNeuralNet(unittest.TestCase):
                                        [216, 432, -56],
                                        [-298, 324, -26]])
         self.assertTrue(len(res.kernels1) == 2 and len(res.kernels1[0]) == 2 and len(res.kernels1[1]) == 2)
-        self.assertTrue(np.array_equal(res.kernels1[0][0], k1_11 - nn.LEARNING_RATE * expected_dc_dk1_11))
-        self.assertTrue(np.array_equal(res.kernels1[0][1], k1_12 - nn.LEARNING_RATE * expected_dc_dk1_12))
-        self.assertTrue(np.array_equal(res.kernels1[1][0], k1_21 - nn.LEARNING_RATE * expected_dc_dk1_21))
-        self.assertTrue(np.array_equal(res.kernels1[1][1], k1_22 - nn.LEARNING_RATE * expected_dc_dk1_22))
+        self.assertTrue(np.array_equal(res.kernels1[0][0], k1_11 - hp.LEARNING_RATE * expected_dc_dk1_11))
+        self.assertTrue(np.array_equal(res.kernels1[0][1], k1_12 - hp.LEARNING_RATE * expected_dc_dk1_12))
+        self.assertTrue(np.array_equal(res.kernels1[1][0], k1_21 - hp.LEARNING_RATE * expected_dc_dk1_21))
+        self.assertTrue(np.array_equal(res.kernels1[1][1], k1_22 - hp.LEARNING_RATE * expected_dc_dk1_22))
         expected_dc_dk2_11 = np.array([[0, 0, 0],
                                        [10, 1582, 4],
                                        [0, 0, 0]])
@@ -177,12 +179,12 @@ class TestNeuralNet(unittest.TestCase):
                                        [0, 494, 0],
                                        [132, 1224, 0]])
         self.assertTrue(len(res.kernels2) == 2 and len(res.kernels2[0]) == 2 and len(res.kernels2[1]) == 2)
-        self.assertTrue(np.array_equal(res.kernels2[0][0], k2_11 - nn.LEARNING_RATE * expected_dc_dk2_11))
-        self.assertTrue(np.array_equal(res.kernels2[0][1], k2_12 - nn.LEARNING_RATE * expected_dc_dk2_12))
-        self.assertTrue(np.array_equal(res.kernels2[1][0], k2_21 - nn.LEARNING_RATE * expected_dc_dk2_21))
-        self.assertTrue(np.array_equal(res.kernels2[1][1], k2_22 - nn.LEARNING_RATE * expected_dc_dk2_22))
+        self.assertTrue(np.array_equal(res.kernels2[0][0], k2_11 - hp.LEARNING_RATE * expected_dc_dk2_11))
+        self.assertTrue(np.array_equal(res.kernels2[0][1], k2_12 - hp.LEARNING_RATE * expected_dc_dk2_12))
+        self.assertTrue(np.array_equal(res.kernels2[1][0], k2_21 - hp.LEARNING_RATE * expected_dc_dk2_21))
+        self.assertTrue(np.array_equal(res.kernels2[1][1], k2_22 - hp.LEARNING_RATE * expected_dc_dk2_22))
         # check biases
-        self.assertTrue(res.biases1[0] == 1 - nn.LEARNING_RATE * 588)
-        self.assertTrue(res.biases1[1] == -2 - nn.LEARNING_RATE * 242)
-        self.assertTrue(res.biases2[0] == -1 - nn.LEARNING_RATE * 218)
-        self.assertTrue(res.biases2[1] == 1 - nn.LEARNING_RATE * 114)
+        self.assertTrue(res.biases1[0] == 1 - hp.LEARNING_RATE * 588)
+        self.assertTrue(res.biases1[1] == -2 - hp.LEARNING_RATE * 242)
+        self.assertTrue(res.biases2[0] == -1 - hp.LEARNING_RATE * 218)
+        self.assertTrue(res.biases2[1] == 1 - hp.LEARNING_RATE * 114)
