@@ -52,9 +52,9 @@ class TestTorch(unittest.TestCase):
         self.assertTrue(np.allclose(updated_torch_biases, my_conv.biases))
 
     def test_res(self):
-        channels = 4
-        board_size = 9
-        minibatch_size = 2
+        channels = 16
+        board_size = 19
+        minibatch_size = 4
 
         class TorchResidualBlock(torch.nn.Module):
             def __init__(self):
@@ -98,3 +98,45 @@ class TestTorch(unittest.TestCase):
         self.assertTrue(np.allclose(updated_torch_biases1, my_res.biases1))
         self.assertTrue(np.allclose(updated_torch_weights2, my_res.kernels2))
         self.assertTrue(np.allclose(updated_torch_biases2, my_res.biases2))
+
+    def test_pol(self):
+        input_channels = 16
+        board_size = 19
+        minibatch_size = 4
+
+        torch_pol = torch.nn.Sequential(
+            torch.nn.Conv2d(input_channels, 2, 1, dtype=torch.float64),
+            torch.nn.ReLU(),
+            torch.nn.Flatten(),
+            torch.nn.Linear((board_size ** 2) * 2, (board_size ** 2) + 1, dtype=torch.float64)
+        )
+
+        my_pol = nn.PolicyHead(in_filters=input_channels, board_size=board_size)
+        my_pol.kernels = np.copy(torch.transpose(torch_pol[0].weight, 0, 1).detach().numpy())
+        my_pol.biases1 = np.copy(torch_pol[0].bias.detach().numpy())
+        my_pol.weights = np.copy(torch_pol[3].weight.detach().numpy())
+        my_pol.biases2 = np.copy(torch_pol[3].bias.detach().numpy())
+
+        # feedforward for both neural nets and compare results
+        np_in = np.random.randn(minibatch_size, input_channels, board_size, board_size)
+        torch_results = torch_pol(torch.tensor(np_in, dtype=torch.float64))
+        my_results = my_pol.feedforward(np_in, raw=True)
+        self.assertTrue(np.allclose(torch_results.detach().numpy(), my_results))
+
+        # do one step of SGD for both nets and compare results
+        raw_target = torch.randn(minibatch_size, (board_size ** 2) + 1, dtype=torch.float64)
+        target = torch.nn.functional.softmax(raw_target, dim=1, dtype=torch.float64)
+        loss = torch.nn.CrossEntropyLoss()
+        optimizer = torch.optim.SGD(torch_pol.parameters(), lr=hp.LEARNING_RATE)
+        optimizer.zero_grad()
+        loss(torch_results, target).backward()
+        optimizer.step()
+        updated_torch_weights1 = torch.transpose(torch_pol[0].weight, 0, 1).detach().numpy()
+        updated_torch_biases1 = torch_pol[0].bias.detach().numpy()
+        updated_torch_weights2 = torch_pol[3].weight.detach().numpy()
+        updated_torch_biases2 = torch_pol[3].bias.detach().numpy()
+        my_pol.sgd(np_in, target.detach().numpy(), None)
+        self.assertTrue(np.allclose(updated_torch_weights1, my_pol.kernels))
+        self.assertTrue(np.allclose(updated_torch_biases1, my_pol.biases1))
+        self.assertTrue(np.allclose(updated_torch_weights2, my_pol.weights))
+        self.assertTrue(np.allclose(updated_torch_biases2, my_pol.biases2))

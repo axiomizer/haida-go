@@ -1,22 +1,24 @@
+import math
 import hyperparams as hp
 import numpy as np
 import nn_util as util
 
 
 class PolicyHead:
-    kernels = []
+    kernels = []  # indexed as [from][to]
     biases1 = None
-    weights = None  # BOARD_SIZE^2 * 2 -> BOARD_SIZE^2 + 1
+    weights = None  # BOARD_SIZE^2 * 2 -> BOARD_SIZE^2 + 1 (indexed as [to][from])
     biases2 = []
     __a1 = []  # activations of convolutional layer
     __a2 = []  # activations of fully-connected linear layer (logit probabilities)
     __p = []  # output after softmax
 
-    def __init__(self, in_filters=hp.FILTERS):
+    def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE):
+        self.board_size = board_size
         self.kernels = [[np.random.randn() for _ in range(2)] for _ in range(in_filters)]
         self.biases1 = np.random.randn(2)
-        self.weights = np.random.randn((hp.BOARD_SIZE ** 2) + 1, (hp.BOARD_SIZE ** 2) * 2)
-        self.biases2 = [np.random.randn((hp.BOARD_SIZE ** 2) + 1)]
+        self.weights = np.random.randn((board_size ** 2) + 1, (board_size ** 2) * 2)
+        self.biases2 = [np.random.randn((board_size ** 2) + 1)]
 
     def __activate(self, in_activations):
         self.__a1 = []
@@ -28,23 +30,30 @@ class PolicyHead:
             self.__a1.append(util.rectify(conv))
         self.__a2 = []
         for i in range(len(in_activations)):
-            self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases2[i])
+            self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases2)
         self.__p = [util.softmax(a) for a in self.__a2]
 
-    def feedforward(self, in_activations):
+    def feedforward(self, in_activations, raw=False):
         self.__activate(in_activations)
-        return self.__p
+        if raw:
+            return self.__a2
+        else:
+            return self.__p
 
     def sgd(self, in_activations, target_policies, _):
+        for pi in target_policies:
+            if not math.isclose(sum(pi), 1):
+                # dc_da2 assumes this
+                raise ValueError('target policy (pi) must sum to 1. actual sum was {}'.format(sum(pi)))
         self.__activate(in_activations)
         dc_da2 = [self.__p[i] - target_policies[i] for i in range(len(in_activations))]
         dc_da1_flat = [np.matmul(np.transpose(self.weights), dc_da2[i]) for i in range(len(in_activations))]
-        dc_da1 = [np.reshape(dc_da1_flat[i], (2, hp.BOARD_SIZE, hp.BOARD_SIZE)) for i in range(len(in_activations))]
+        dc_da1 = [np.reshape(dc_da1_flat[i], (2, self.board_size, self.board_size)) for i in range(len(in_activations))]
         da1_dz1 = [self.__a1[i] > 0 for i in range(len(self.__a1))]
         dc_dz1 = [np.multiply(dc_da1[i], da1_dz1[i]) for i in range(len(self.__a1))]
         dc_da_prev = []
         for i in range(len(in_activations)):
-            dc_da_prev_example = np.zeros((len(self.kernels), hp.BOARD_SIZE, hp.BOARD_SIZE))
+            dc_da_prev_example = np.zeros((len(self.kernels), self.board_size, self.board_size))
             for f in range(len(self.kernels)):
                 dc_da_prev_example[f] = sum([dc_dz1[i][fp] * self.kernels[f][fp] for fp in range(len(self.kernels[f]))])
             dc_da_prev.append(dc_da_prev_example)
@@ -53,7 +62,7 @@ class PolicyHead:
         return dc_da_prev
 
     def __update_layer2_params(self, dc_da2):
-        dc_dw = np.zeros(len(self.weights), len(self.weights[0]))
+        dc_dw = np.zeros((len(self.weights), len(self.weights[0])))
         for i in range(len(dc_da2)):
             dc_dw += np.outer(dc_da2[i], self.__a1[i])
         self.weights -= (hp.LEARNING_RATE / len(dc_da2)) * dc_dw
