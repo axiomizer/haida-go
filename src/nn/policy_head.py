@@ -18,7 +18,7 @@ class PolicyHead:
         self.kernels = [[np.random.randn() for _ in range(2)] for _ in range(in_filters)]
         self.biases1 = np.random.randn(2)
         self.weights = np.random.randn((board_size ** 2) + 1, (board_size ** 2) * 2)
-        self.biases2 = [np.random.randn((board_size ** 2) + 1)]
+        self.biases2 = np.random.randn((board_size ** 2) + 1)
 
     def __activate(self, in_activations):
         self.__a1 = []
@@ -46,7 +46,7 @@ class PolicyHead:
                 # dc_da2 assumes this
                 raise ValueError('target policy (pi) must sum to 1. actual sum was {}'.format(sum(pi)))
         self.__activate(in_activations)
-        dc_da2 = [self.__p[i] - target_policies[i] for i in range(len(in_activations))]
+        dc_da2 = [(self.__p[i] - target_policies[i]) / len(in_activations) for i in range(len(in_activations))]
         dc_da1_flat = [np.matmul(np.transpose(self.weights), dc_da2[i]) for i in range(len(in_activations))]
         dc_da1 = [np.reshape(dc_da1_flat[i], (2, self.board_size, self.board_size)) for i in range(len(in_activations))]
         da1_dz1 = [self.__a1[i] > 0 for i in range(len(self.__a1))]
@@ -65,11 +65,11 @@ class PolicyHead:
         dc_dw = np.zeros((len(self.weights), len(self.weights[0])))
         for i in range(len(dc_da2)):
             dc_dw += np.outer(dc_da2[i], self.__a1[i])
-        self.weights -= (hp.LEARNING_RATE / len(dc_da2)) * dc_dw
+        self.weights -= hp.LEARNING_RATE * dc_dw
         dc_db = np.zeros(len(self.weights))
         for i in range(len(dc_da2)):
             dc_db += dc_da2[i]
-        self.biases2 -= (hp.LEARNING_RATE / len(dc_da2)) * dc_db
+        self.biases2 -= hp.LEARNING_RATE * dc_db
 
     def __update_layer1_params(self, dc_dz1, in_activations):
         for i in range(len(self.kernels)):
@@ -77,9 +77,9 @@ class PolicyHead:
                 dc_dk = 0
                 for x in range(len(dc_dz1)):
                     dc_dk += np.sum(dc_dz1[x][j] * in_activations[x][i])
-                self.kernels[i][j] -= (hp.LEARNING_RATE / len(in_activations)) * dc_dk
+                self.kernels[i][j] -= hp.LEARNING_RATE * dc_dk
         for i in range(len(self.kernels[0])):
             dc_db = 0
             for x in range(len(dc_dz1)):
                 dc_db += np.sum(dc_dz1[x][i])
-            self.biases1[i] -= (hp.LEARNING_RATE / len(in_activations)) * dc_db
+            self.biases1[i] -= hp.LEARNING_RATE * dc_db

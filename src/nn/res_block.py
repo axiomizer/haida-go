@@ -64,10 +64,10 @@ class ResidualBlock:
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(activations)):
                     dc_dw += util.convolve(activations[x][i], dc_dz[x][j])
-                kernels[i][j] -= (hp.LEARNING_RATE / len(activations)) * dc_dw
+                kernels[i][j] -= hp.LEARNING_RATE * dc_dw
         # biases
         for i in range(len(kernels[0])):
             dc_db = 0
             for x in range(len(activations)):
                 dc_db += np.sum(dc_dz[x][i])
-            biases[i] -= (hp.LEARNING_RATE / len(activations)) * dc_db
+            biases[i] -= hp.LEARNING_RATE * dc_db

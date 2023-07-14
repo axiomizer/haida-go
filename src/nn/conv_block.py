@@ -41,10 +41,10 @@ class ConvolutionalBlock:
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(in_activations)):
                     dc_dw += util.convolve(in_activations[x][i], dc_dz[x][j])
-                self.kernels[i][j] -= (hp.LEARNING_RATE / len(in_activations)) * dc_dw
+                self.kernels[i][j] -= hp.LEARNING_RATE * dc_dw
         # biases
         for i in range(len(self.kernels[0])):
             dc_db = 0
             for x in range(len(in_activations)):
                 dc_db += np.sum(dc_dz[x][i])
-            self.biases[i] -= (hp.LEARNING_RATE / len(in_activations)) * dc_db
+            self.biases[i] -= hp.LEARNING_RATE * dc_db
