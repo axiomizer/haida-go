@@ -10,11 +10,11 @@ class NeuralNet:
 
     # TODO: L2 regularization
     # TODO: Batch Norm (can get rid of biases once this is implemented)
-    def __init__(self):
+    def __init__(self, residual_blocks=hp.RESIDUAL_BLOCKS):
         conv = ConvolutionalBlock()
-        res = [ResidualBlock() for _ in range(hp.RESIDUAL_BLOCKS)]
+        res = [ResidualBlock() for _ in range(residual_blocks)]
         conv.to = res[0]
-        for i in range(hp.RESIDUAL_BLOCKS-1):
+        for i in range(residual_blocks - 1):
             res[i].to = [res[i+1]]
         pol = PolicyHead()
         val = ValueHead()

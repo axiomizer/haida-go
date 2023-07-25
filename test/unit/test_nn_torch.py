@@ -1,18 +1,9 @@
 from nn import neural_net as nn
+from mse_stub import MseStub
 import numpy as np
 import torch
 import hyperparams as hp
 import unittest
-
-
-class LastLayer:
-    @staticmethod
-    def sgd(a, pi, _):
-        return [(-2 / (pi[i].size * len(a))) * (pi[i] - a[i]) for i in range(len(a))]
-
-    @staticmethod
-    def feedforward(in_activations):
-        return in_activations
 
 
 class TestTorch(unittest.TestCase):
@@ -30,7 +21,7 @@ class TestTorch(unittest.TestCase):
         my_conv = nn.ConvolutionalBlock(input_channels, output_channels)
         my_conv.kernels = np.copy(torch.transpose(torch_conv[0].weight, 0, 1).detach().numpy())
         my_conv.biases = np.copy(torch_conv[0].bias.detach().numpy())
-        my_conv.to = LastLayer()
+        my_conv.to = MseStub()
 
         # feedforward for both neural nets and compare results
         np_in = np.random.randn(minibatch_size, input_channels, board_size, board_size)
@@ -78,7 +69,7 @@ class TestTorch(unittest.TestCase):
         my_res.biases1 = np.copy(torch_res.conv1.bias.detach().numpy())
         my_res.kernels2 = np.copy(torch.transpose(torch_res.conv2.weight, 0, 1).detach().numpy())
         my_res.biases2 = np.copy(torch_res.conv2.bias.detach().numpy())
-        my_res.to = [LastLayer()]
+        my_res.to = [MseStub()]
 
         # feedforward for both neural nets and compare results
         np_in = np.random.randn(minibatch_size, channels, board_size, board_size)
@@ -206,3 +197,16 @@ class TestTorch(unittest.TestCase):
 
         # compare gradient with respect to input
         self.assertTrue(np.allclose(torch_in.grad, my_input_grads))
+
+    def test_full_net(self):
+        residual_blocks = 3
+
+        class TorchNet(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, x):
+                return
+
+        torch_net = TorchNet()
+        # TODO: finish this test
