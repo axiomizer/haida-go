@@ -1,6 +1,6 @@
 import numpy as np
-import hyperparams as hp
-import nn_util as util
+import nn.hyperparams as hp
+import nn.operations as op
 
 
 class ConvolutionalBlock:
@@ -15,10 +15,10 @@ class ConvolutionalBlock:
     def __activate(self, in_activations):
         a = []
         for in_a in in_activations:
-            conv = util.convolve_all_kernels(in_a, self.kernels)
+            conv = op.convolve_all_kernels(in_a, self.kernels)
             for f in range(len(self.kernels[0])):
                 conv[f] += self.biases[f]
-            a.append(util.rectify(conv))
+            a.append(op.rectify(conv))
         return a
 
     def feedforward(self, in_activations):
@@ -30,7 +30,7 @@ class ConvolutionalBlock:
         dc_da = self.to.sgd(a, target_policies, target_values)
         da_dz = [a[i] > 0 for i in range(len(a))]
         dc_dz = [np.multiply(dc_da[i], da_dz[i]) for i in range(len(a))]
-        dc_da_prev = [util.convolve_all_kernels(x, util.invert_kernels(self.kernels)) for x in dc_dz]
+        dc_da_prev = [op.convolve_all_kernels(x, op.invert_kernels(self.kernels)) for x in dc_dz]
         self.__update_params(in_activations, dc_dz)
         return dc_da_prev
 
@@ -40,7 +40,7 @@ class ConvolutionalBlock:
             for j in range(len(self.kernels[0])):
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(in_activations)):
-                    dc_dw += util.convolve(in_activations[x][i], dc_dz[x][j])
+                    dc_dw += op.convolve(in_activations[x][i], dc_dz[x][j])
                 self.kernels[i][j] -= hp.LEARNING_RATE * dc_dw
         # biases
         for i in range(len(self.kernels[0])):

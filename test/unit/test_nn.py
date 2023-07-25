@@ -1,8 +1,8 @@
-import neural_net as nn
+import nn.neural_net as nn
 import numpy as np
-import nn_util as util
+import nn.operations as util
 import unittest
-import hyperparams as hp
+import nn.hyperparams as hp
 
 
 class TestNeuralNet(unittest.TestCase):

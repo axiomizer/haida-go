@@ -1,6 +1,6 @@
-import hyperparams as hp
+import nn.hyperparams as hp
 import numpy as np
-import nn_util as util
+import nn.operations as op
 
 
 class ValueHead:
@@ -24,11 +24,11 @@ class ValueHead:
         self.__a1 = []
         for in_a in in_activations:
             conv = sum([in_a[i] * self.l1_kernels[i] for i in range(len(self.l1_kernels))]) + self.l1_bias
-            self.__a1.append(util.rectify(conv))
+            self.__a1.append(op.rectify(conv))
         self.__a2 = []
         for i in range(len(in_activations)):
             z = np.matmul(self.l2_weights, self.__a1[i].flatten()) + self.l2_biases
-            self.__a2.append(util.rectify(z))
+            self.__a2.append(op.rectify(z))
         self.__v = []
         for i in range(len(in_activations)):
             z = np.dot(self.l3_weights, self.__a2[i]) + self.l3_bias

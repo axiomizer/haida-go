@@ -29,10 +29,10 @@ def run_conv(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_va
             torch.nn.ReLU()
         )
 
-        my_conv = nn.ConvolutionalBlock(i_vals[i], o_vals[o])
-        my_conv.kernels = np.copy(torch.transpose(torch_conv[0].weight, 0, 1).detach().numpy())
-        my_conv.biases = np.copy(torch_conv[0].bias.detach().numpy())
-        my_conv.to = MseStub()
+        haida_conv = nn.ConvolutionalBlock(i_vals[i], o_vals[o])
+        haida_conv.kernels = np.copy(torch.transpose(torch_conv[0].weight, 0, 1).detach().numpy())
+        haida_conv.biases = np.copy(torch_conv[0].bias.detach().numpy())
+        haida_conv.to = MseStub()
 
         # time feedforward for both neural nets
         np_in = np.random.randn(mb_vals[mb], i_vals[i], b_vals[b], b_vals[b])
@@ -41,7 +41,7 @@ def run_conv(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_va
         torch_conv(torch_in)
         torch_times[i, o, b, mb] = time.time() - t
         t = time.time()
-        my_conv.feedforward(np_in)
+        haida_conv.feedforward(np_in)
         haida_times[i, o, b, mb] = time.time() - t
 
         progress_bar.increment()
@@ -49,13 +49,10 @@ def run_conv(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_va
 
     if run_name is None:
         date = datetime.datetime.today().strftime('%m%d%y')
-        # existing_files = glob.glob('test\\perf\\data\\conv-{}-*'.format(date))
         existing_files = glob.glob(os.path.join(DATA_PATH, 'conv-{}-*'.format(date)))
         file_id = max([int(f.split('-')[-1].split('.')[0]) for f in existing_files], default=0) + 1
-        # filename = 'test/perf/data/conv-{}-{}.pickle'.format(date, file_id)
         filename = os.path.join(DATA_PATH, 'conv-{}-{}.pickle'.format(date, file_id))
     else:
-        # filename = 'test/perf/data/{}.pickle'.format(run_name)
         filename = os.path.join(DATA_PATH, '{}.pickle'.format(run_name))
     data = {
         'type': 'conv',
@@ -69,7 +66,6 @@ def run_conv(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_va
 
 
 def plot(filename, show_torch=True, show_haida=True):
-    # with open('test/perf/data/{}.pickle'.format(filename), 'rb') as f:
     with open(os.path.join(DATA_PATH, '{}.pickle'.format(filename)), 'rb') as f:
         data = pickle.load(f)
     torch_times = np.array(data['torch'])

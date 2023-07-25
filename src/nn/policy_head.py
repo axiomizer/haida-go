@@ -1,7 +1,7 @@
 import math
-import hyperparams as hp
+import nn.hyperparams as hp
 import numpy as np
-import nn_util as util
+import nn.operations as op
 
 
 class PolicyHead:
@@ -27,11 +27,11 @@ class PolicyHead:
             conv = np.zeros((2, in_shape[1], in_shape[2]))
             for f in range(len(self.kernels[0])):
                 conv[f] = sum([in_a[i] * self.kernels[i][f] for i in range(len(self.kernels))]) + self.biases1[f]
-            self.__a1.append(util.rectify(conv))
+            self.__a1.append(op.rectify(conv))
         self.__a2 = []
         for i in range(len(in_activations)):
             self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases2)
-        self.__p = [util.softmax(a) for a in self.__a2]
+        self.__p = [op.softmax(a) for a in self.__a2]
 
     def feedforward(self, in_activations, raw=False):
         self.__activate(in_activations)
