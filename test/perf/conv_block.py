@@ -1,21 +1,15 @@
-from nn import neural_net as nn
+from nn.conv_block import ConvolutionalBlock
 from mse_stub import MseStub
 import matplotlib.pyplot as plt
 import itertools
 import numpy as np
 import torch
 import time
-from progress_bar import ProgressBar
-import datetime
-import glob
-import pickle
-import os
+from perf.progress_bar import ProgressBar
+from perf import perf_data
 
 
-DATA_PATH = os.path.join('test', 'perf', 'data')
-
-
-def run_conv(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_vals=range(1, 5), run_name=None):
+def feedforward(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_vals=range(1, 5), run_name=None):
     torch_times = np.zeros((len(i_vals), len(o_vals), len(b_vals), len(mb_vals)))
     haida_times = np.zeros((len(i_vals), len(o_vals), len(b_vals), len(mb_vals)))
     progress_bar = ProgressBar(len(i_vals) * len(o_vals) * len(b_vals) * len(mb_vals))
@@ -29,7 +23,7 @@ def run_conv(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_va
             torch.nn.ReLU()
         )
 
-        haida_conv = nn.ConvolutionalBlock(i_vals[i], o_vals[o])
+        haida_conv = ConvolutionalBlock(i_vals[i], o_vals[o])
         haida_conv.kernels = np.copy(torch.transpose(torch_conv[0].weight, 0, 1).detach().numpy())
         haida_conv.biases = np.copy(torch_conv[0].bias.detach().numpy())
         haida_conv.to = MseStub()
@@ -47,32 +41,24 @@ def run_conv(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_va
         progress_bar.increment()
     progress_bar.end()
 
-    if run_name is None:
-        date = datetime.datetime.today().strftime('%m%d%y')
-        existing_files = glob.glob(os.path.join(DATA_PATH, 'conv-{}-*'.format(date)))
-        file_id = max([int(f.split('-')[-1].split('.')[0]) for f in existing_files], default=0) + 1
-        filename = os.path.join(DATA_PATH, 'conv-{}-{}.pickle'.format(date, file_id))
-    else:
-        filename = os.path.join(DATA_PATH, '{}.pickle'.format(run_name))
     data = {
-        'type': 'conv',
+        'type': 'convff',
         'axes': ['input filters', 'output filters', 'board size', 'minibatch size'],
         'ranges': [i_vals, o_vals, b_vals, mb_vals],
         'torch': torch_times,
         'haida': haida_times
     }
-    with open(filename, 'wb') as f:
-        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    filename = perf_data.save('convff', data, run_name=run_name)
+    print('saved to {}'.format(filename))
 
 
-def plot(filename, show_torch=True, show_haida=True):
-    with open(os.path.join(DATA_PATH, '{}.pickle'.format(filename)), 'rb') as f:
-        data = pickle.load(f)
+def plot(run_name, show_torch=True, show_haida=True):
+    data = perf_data.load(run_name)
     torch_times = np.array(data['torch'])
     haida_times = np.array(data['haida'])
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
-    if data['type'] == 'conv':
+    if data['type'] == 'convff':
         axis_indices = [(0, 1), (2, 3)]
     else:
         print('plotting not implemented for type {}'.format(data['type']))
