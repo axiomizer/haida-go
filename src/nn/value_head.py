@@ -1,6 +1,6 @@
 import nn.hyperparams as hp
 import numpy as np
-import nn.operations as op
+import nn.operations.op as op
 
 
 class ValueHead:

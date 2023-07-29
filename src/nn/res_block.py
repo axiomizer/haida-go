@@ -1,6 +1,7 @@
 import numpy as np
 import nn.hyperparams as hp
-import nn.operations as op
+import nn.operations.op as op
+import nnops_ext
 
 
 class ResidualBlock:
@@ -21,13 +22,13 @@ class ResidualBlock:
     def __activate(self, in_activations):
         self.__a1 = []
         for in_a in in_activations:
-            conv = op.convolve_all_kernels(in_a, self.kernels1)
+            conv = op.correlate_all_kernels(in_a, self.kernels1)
             for f in range(len(self.kernels1[0])):
                 conv[f] += self.biases1[f]
             self.__a1.append(op.rectify(conv))
         self.__a2 = []
         for i in range(len(in_activations)):
-            conv = op.convolve_all_kernels(self.__a1[i], self.kernels2)
+            conv = op.correlate_all_kernels(self.__a1[i], self.kernels2)
             for f in range(len(self.kernels2[0])):
                 conv[f] += self.biases2[f]
             self.__a2.append(op.rectify(conv + in_activations[i]))
@@ -46,12 +47,12 @@ class ResidualBlock:
         dc_da2 = [sum(x) for x in zip(*dc_da2s)]
         da2_dz2 = [self.__a2[i] > 0 for i in range(len(self.__a2))]
         dc_dz2 = [np.multiply(dc_da2[i], da2_dz2[i]) for i in range(len(self.__a2))]
-        dc_da1 = [op.convolve_all_kernels(x, op.invert_kernels(self.kernels2)) for x in dc_dz2]
+        dc_da1 = [op.correlate_all_kernels(x, op.invert_kernels(self.kernels2)) for x in dc_dz2]
         da1_dz1 = [self.__a1[i] > 0 for i in range(len(self.__a1))]
         dc_dz1 = [np.multiply(dc_da1[i], da1_dz1[i]) for i in range(len(self.__a1))]
         dc_da_prev = []
         for i in range(len(in_activations)):
-            dc_da_prev.append(op.convolve_all_kernels(dc_dz1[i], op.invert_kernels(self.kernels1)) + dc_dz2[i])
+            dc_da_prev.append(op.correlate_all_kernels(dc_dz1[i], op.invert_kernels(self.kernels1)) + dc_dz2[i])
         self.__update_params(self.__a1, dc_dz2, self.kernels2, self.biases2)
         self.__update_params(in_activations, dc_dz1, self.kernels1, self.biases1)
         return dc_da_prev
@@ -63,7 +64,7 @@ class ResidualBlock:
             for j in range(len(kernels[0])):
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(activations)):
-                    dc_dw += op.convolve(activations[x][i], dc_dz[x][j])
+                    dc_dw += nnops_ext.correlate(activations[x][i], dc_dz[x][j], 1)
                 kernels[i][j] -= hp.LEARNING_RATE * dc_dw
         # biases
         for i in range(len(kernels[0])):

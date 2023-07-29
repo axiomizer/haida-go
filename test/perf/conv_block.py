@@ -9,7 +9,7 @@ from perf.progress_bar import ProgressBar
 from perf import perf_data
 
 
-def feedforward(i_vals=range(2, 8), o_vals=range(2, 17), b_vals=range(3, 20), mb_vals=range(1, 5), run_name=None):
+def feedforward(i_vals=range(8, 65, 8), o_vals=range(8, 65, 8), b_vals=(9, 13, 19), mb_vals=range(8, 17, 4), run_name=None):
     torch_times = np.zeros((len(i_vals), len(o_vals), len(b_vals), len(mb_vals)))
     haida_times = np.zeros((len(i_vals), len(o_vals), len(b_vals), len(mb_vals)))
     progress_bar = ProgressBar(len(i_vals) * len(o_vals) * len(b_vals) * len(mb_vals))

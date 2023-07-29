@@ -1,4 +1,3 @@
-
 class MseStub:
     @staticmethod
     def sgd(a, pi, _):

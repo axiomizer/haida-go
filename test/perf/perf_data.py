@@ -3,7 +3,6 @@ import datetime
 import glob
 import pickle
 
-
 DATA_PATH = os.path.join('test', 'perf', 'data')
 
 

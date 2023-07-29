@@ -1,15 +1,13 @@
 import scipy
 from perf.progress_bar import ProgressBar
 import numpy as np
-from nn import operations as op
+import nnops_ext
 import time
 from perf import perf_data
 import matplotlib.pyplot as plt
 
 
-def convolve(sizes=None, run_name=None):
-    if sizes is None:
-        sizes = [100 * i for i in range(1, 10)]
+def correlate(sizes=range(100, 5001, 100), run_name=None):
     haida_times = []
     ndimage_times = []
     fft_times = []
@@ -20,18 +18,18 @@ def convolve(sizes=None, run_name=None):
         m2 = np.random.randn(3, 3)
 
         t = time.time()
-        haida_result = op.convolve(m1, m2)
+        haida_result = nnops_ext.correlate(m1, m2, 1)
         t = time.time() - t
         haida_times.append(t)
 
         t = time.time()
-        # only equivalent to haida convolve for 3x3 kernels
-        ndimage_result = scipy.ndimage.convolve(m1, np.flip(m2), mode='constant', cval=0.0)
+        # only equivalent to haida correlation for 3x3 kernels
+        ndimage_result = scipy.ndimage.correlate(m1, m2, mode='constant', cval=0.0)
         t = time.time() - t
         ndimage_times.append(t)
 
         t = time.time()
-        # only equivalent to haida convolve for 3x3 kernels
+        # only equivalent to haida correlation for 3x3 kernels
         fft_result = scipy.signal.fftconvolve(m1, np.flip(m2), mode='same')
         t = time.time() - t
         fft_times.append(t)
@@ -44,20 +42,20 @@ def convolve(sizes=None, run_name=None):
     progress_bar.end()
 
     data = {
-        'type': 'conv',
+        'type': 'corr',
         'axis': 'size of first matrix',
         'sizes': sizes,
         'haida': haida_times,
         'ndimage': ndimage_times,
         'fft': fft_times
     }
-    filename = perf_data.save('conv', data, run_name=run_name)
+    filename = perf_data.save('corr', data, run_name=run_name)
     print('saved to {}'.format(filename))
 
 
 def plot(run_name):
     data = perf_data.load(run_name)
-    if data['type'] != 'conv':
+    if data['type'] != 'corr':
         print('plotting not implemented for type {}'.format(data['type']))
         return
     sizes = np.array(data['sizes'])

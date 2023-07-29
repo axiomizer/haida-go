@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+case "$1" in
+  build)
+    (cd src\\nn\\operations; python.exe setup.py install)
+    ;;
+  *)
+    printf "usage:\n\"haida build\"\tbuild the project"
+    ;;
+esac
