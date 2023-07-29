@@ -1,8 +1,8 @@
-from nn.conv_block import ConvolutionalBlock
-from nn.res_block import ResidualBlock
-from nn.policy_head import PolicyHead
-from nn.value_head import ValueHead
-import nn.hyperparams as hp
+from src.nn.conv_block import ConvolutionalBlock
+from src.nn.res_block import ResidualBlock
+from src.nn.policy_head import PolicyHead
+from src.nn.value_head import ValueHead
+import src.nn.hyperparams as hp
 
 
 class NeuralNet:

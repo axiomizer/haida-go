@@ -1,6 +1,6 @@
 import numpy as np
-import nn.hyperparams as hp
-import nn.operations.op as op
+from src.nn import hyperparams as hp
+from src.nn.operations import op
 import nnops_ext
 
 

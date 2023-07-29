@@ -1,15 +1,19 @@
-from nn.conv_block import ConvolutionalBlock
-from mse_stub import MseStub
+from src.nn.conv_block import ConvolutionalBlock
+from test.mse_stub import MseStub
 import matplotlib.pyplot as plt
 import itertools
 import numpy as np
 import torch
 import time
-from perf.progress_bar import ProgressBar
-from perf import perf_data
+from test.perf.progress_bar import ProgressBar
+from test.perf import pickler
 
 
-def feedforward(i_vals=range(8, 65, 8), o_vals=range(8, 65, 8), b_vals=(9, 13, 19), mb_vals=range(8, 17, 4), run_name=None):
+def feedforward(i_vals=range(8, 65, 8),
+                o_vals=range(8, 65, 8),
+                b_vals=(9, 13, 19),
+                mb_vals=range(8, 17, 4),
+                run_name=None):
     torch_times = np.zeros((len(i_vals), len(o_vals), len(b_vals), len(mb_vals)))
     haida_times = np.zeros((len(i_vals), len(o_vals), len(b_vals), len(mb_vals)))
     progress_bar = ProgressBar(len(i_vals) * len(o_vals) * len(b_vals) * len(mb_vals))
@@ -52,17 +56,12 @@ def feedforward(i_vals=range(8, 65, 8), o_vals=range(8, 65, 8), b_vals=(9, 13, 1
     print('saved to {}'.format(filename))
 
 
-def plot(run_name, show_torch=True, show_haida=True):
-    data = perf_data.load(run_name)
+def plot(data, show_torch=True, show_haida=True):
     torch_times = np.array(data['torch'])
     haida_times = np.array(data['haida'])
     fig = plt.figure(figsize=plt.figaspect(0.5))
 
-    if data['type'] == 'convff':
-        axis_indices = [(0, 1), (2, 3)]
-    else:
-        print('plotting not implemented for type {}'.format(data['type']))
-        return
+    axis_indices = [(0, 1), (2, 3)]
     for i in range(len(axis_indices)):
         x_axis, y_axis = axis_indices[i]
         ax = fig.add_subplot(1, len(axis_indices), i + 1, projection='3d')

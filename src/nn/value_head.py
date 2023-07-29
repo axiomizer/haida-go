@@ -1,6 +1,6 @@
-import nn.hyperparams as hp
+import src.nn.hyperparams as hp
 import numpy as np
-import nn.operations.op as op
+from src.nn.operations import op
 
 
 class ValueHead:

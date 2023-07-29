@@ -1,9 +1,9 @@
 import scipy
-from perf.progress_bar import ProgressBar
+from test.perf.progress_bar import ProgressBar
 import numpy as np
 import nnops_ext
 import time
-from perf import perf_data
+from test.perf import pickler
 import matplotlib.pyplot as plt
 
 
@@ -53,11 +53,7 @@ def correlate(sizes=range(100, 5001, 100), run_name=None):
     print('saved to {}'.format(filename))
 
 
-def plot(run_name):
-    data = perf_data.load(run_name)
-    if data['type'] != 'corr':
-        print('plotting not implemented for type {}'.format(data['type']))
-        return
+def plot(data):
     sizes = np.array(data['sizes'])
     fig, ax = plt.subplots()
     ax.plot(sizes, np.array(data['haida']), label='haida')

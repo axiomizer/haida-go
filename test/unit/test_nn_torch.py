@@ -1,8 +1,8 @@
-import nn.neural_net as nn
-from mse_stub import MseStub
+import src.nn.neural_net as nn
+from test.mse_stub import MseStub
 import numpy as np
 import torch
-import nn.hyperparams as hp
+import src.nn.hyperparams as hp
 import unittest
 
 

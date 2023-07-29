@@ -1,3 +1,4 @@
 .idea
 test/perf/data
 src/nn/operations/build
+__pycache__

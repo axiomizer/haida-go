@@ -1,7 +1,8 @@
-import nn.neural_net as nn
+from src.nn.conv_block import ConvolutionalBlock
+from src.nn.res_block import ResidualBlock
 import numpy as np
 import unittest
-import nn.hyperparams as hp
+import src.nn.hyperparams as hp
 import nnops_ext
 
 
@@ -74,7 +75,7 @@ class TestNeuralNet(unittest.TestCase):
             def sgd(a, pi, _):
                 return [-2*(pi[i] - a[i]) for i in range(len(a))]
 
-        conv = nn.ConvolutionalBlock(2, 2)
+        conv = ConvolutionalBlock(2, 2)
         k11 = np.array([[-1., -2., 3.], [1., 3., -1.], [-1., 0., 0.]])
         k12 = np.array([[-2., 2., 2.], [-3., 0., -2.], [-1., -3., 1.]])
         k21 = np.array([[-3., 3., -1.], [2., 2., 2.], [-2., 0., 0.]])
@@ -122,7 +123,7 @@ class TestNeuralNet(unittest.TestCase):
             def sgd(a, pi, _):
                 return [-2*(pi[i] - a[i]) for i in range(len(a))]
 
-        res = nn.ResidualBlock(2)
+        res = ResidualBlock(2)
         k1_11 = np.array([[-2., -2., -3.], [-2., 3., -1.], [-3., 0., -3.]])
         k1_12 = np.array([[1., 2., -2.], [2., -1., 0.], [1., 2., -1.]])
         k1_21 = np.array([[-1., 3., 2.], [-3., -3., -1.], [3., 1., -1.]])

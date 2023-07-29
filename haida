@@ -1,10 +1,31 @@
 #!/usr/bin/env bash
 
+print_usage () {
+  cat <<EOF
+
+Usage:
+
+haida build
+  Build the project
+haida unit
+  Run unit tests
+haida perf run <unit> [-i]
+  Run performance testing on code unit <unit> and store the results in a file
+  Provide no <unit> to get a list of units
+  -i: supply custom testing parameters interactively
+haida perf plot <file>
+  Plot the results of performance testing stored in <file>
+  <file> should not include the path or extension
+EOF
+}
+
 case "$1" in
-  build)
-    (cd src\\nn\\operations; python.exe setup.py install)
-    ;;
-  *)
-    printf "usage:\n\"haida build\"\tbuild the project"
-    ;;
+  build) (cd src\\nn\\operations; python setup.py install);;
+  unit) python -m unittest discover -s test/unit -v;;
+  perf)
+    python -m test.perf "${@:2}"
+    if [ $? -eq 2 ]; then
+      print_usage
+    fi;;
+  *) print_usage;;
 esac
