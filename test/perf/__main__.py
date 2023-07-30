@@ -22,11 +22,12 @@ def describe_code_units():
 
 
 def get_custom_parameters(unit):
+    # TODO: implement this
     return ''
 
 
 def plot(name):
-    data = perf_data.load(name)
+    data = pickler.load(name)
     if data['type'] not in code_units:
         print('plotting not implemented for type {}'.format(data['type']))
         return

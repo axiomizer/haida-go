@@ -52,7 +52,7 @@ def feedforward(i_vals=range(8, 65, 8),
         'torch': torch_times,
         'haida': haida_times
     }
-    filename = perf_data.save('convff', data, run_name=run_name)
+    filename = pickler.save('convff', data, run_name=run_name)
     print('saved to {}'.format(filename))
 
 

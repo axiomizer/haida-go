@@ -49,7 +49,7 @@ def correlate(sizes=range(100, 5001, 100), run_name=None):
         'ndimage': ndimage_times,
         'fft': fft_times
     }
-    filename = perf_data.save('corr', data, run_name=run_name)
+    filename = pickler.save('corr', data, run_name=run_name)
     print('saved to {}'.format(filename))
 
 
