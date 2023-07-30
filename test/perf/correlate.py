@@ -56,6 +56,9 @@ def correlate(sizes=range(100, 5001, 100), run_name=None):
 def plot(data):
     sizes = np.array(data['sizes'])
     fig, ax = plt.subplots()
+    fig.suptitle(data['type'])
+    ax.set_xlabel(data['axis'])
+    ax.set_ylabel('time')
     ax.plot(sizes, np.array(data['haida']), label='haida')
     ax.plot(sizes, np.array(data['ndimage']), label='ndimage')
     ax.plot(sizes, np.array(data['fft']), label='fft')

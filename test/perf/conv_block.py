@@ -60,6 +60,7 @@ def plot(data, show_torch=True, show_haida=True):
     torch_times = np.array(data['torch'])
     haida_times = np.array(data['haida'])
     fig = plt.figure(figsize=plt.figaspect(0.5))
+    fig.suptitle(data['type'])
 
     axis_indices = [(0, 1), (2, 3)]
     for i in range(len(axis_indices)):
@@ -67,6 +68,7 @@ def plot(data, show_torch=True, show_haida=True):
         ax = fig.add_subplot(1, len(axis_indices), i + 1, projection='3d')
         ax.set_xlabel(data['axes'][x_axis])
         ax.set_ylabel(data['axes'][y_axis])
+        ax.set_zlabel('time')
 
         x, y = np.meshgrid(data['ranges'][x_axis], data['ranges'][y_axis])
         axis_maxes = [len(r) - 1 for r in data['ranges']]
@@ -77,4 +79,5 @@ def plot(data, show_torch=True, show_haida=True):
             ax.plot_wireframe(x, y, torch_z, color='r', label='torch')
         if show_haida:
             ax.plot_wireframe(x, y, haida_z, color='c', label='haida')
+        ax.legend()
     plt.show()
