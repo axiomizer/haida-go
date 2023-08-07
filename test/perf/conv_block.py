@@ -1,5 +1,3 @@
-from src.nn.conv_block import ConvolutionalBlock
-from test.mse_stub import MseStub
 import matplotlib.pyplot as plt
 import itertools
 import numpy as np
@@ -8,6 +6,7 @@ import time
 from test.perf.progress_bar import ProgressBar
 from test.perf import pickler
 from test.perf.performance_unit import PerformanceUnit
+from test.torchnet import blocks
 
 
 class ConvolutionalBlockFeedforwardUnit(PerformanceUnit):
@@ -36,15 +35,8 @@ class ConvolutionalBlockFeedforwardUnit(PerformanceUnit):
                                              range(len(self.o_vals)),
                                              range(len(self.b_vals)),
                                              range(len(self.mb_vals))):
-            torch_conv = torch.nn.Sequential(
-                torch.nn.Conv2d(self.i_vals[i], self.o_vals[o], 3, padding=1, dtype=torch.float64),
-                torch.nn.ReLU()
-            )
-
-            haida_conv = ConvolutionalBlock(self.i_vals[i], self.o_vals[o])
-            haida_conv.kernels = np.copy(torch.transpose(torch_conv[0].weight, 0, 1).detach().numpy())
-            haida_conv.biases = np.copy(torch_conv[0].bias.detach().numpy())
-            haida_conv.to = MseStub()
+            torch_conv = blocks.TorchConvBlock(self.i_vals[i], self.o_vals[o])
+            haida_conv = torch_conv.copy_to_haida()
 
             # time feedforward for both neural nets
             np_in = np.random.randn(self.mb_vals[mb], self.i_vals[i], self.b_vals[b], self.b_vals[b])

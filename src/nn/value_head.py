@@ -21,6 +21,7 @@ class ValueHead:
         self.l3_bias = np.random.randn()
 
     def __activate(self, in_activations):
+        self.__in_a = in_activations
         self.__a1 = []
         for in_a in in_activations:
             conv = sum([in_a[i] * self.l1_kernels[i] for i in range(len(self.l1_kernels))]) + self.l1_bias
@@ -38,26 +39,25 @@ class ValueHead:
         self.__activate(in_activations)
         return self.__v
 
-    def sgd(self, in_activations, _, target_values):
-        self.__activate(in_activations)
-        dc_dv = [-2 * (target_values[i] - self.__v[i]) / len(in_activations) for i in range(len(in_activations))]
-        dc_dz3 = [dc_dv[i] * (1 - self.__v[i] ** 2) for i in range(len(in_activations))]
-        dc_da2 = [self.l3_weights * dc_dz3[i] for i in range(len(in_activations))]
+    def backprop(self, target_values):
+        dc_dv = [-2 * (target_values[i] - self.__v[i]) / len(self.__in_a) for i in range(len(self.__in_a))]
+        dc_dz3 = [dc_dv[i] * (1 - self.__v[i] ** 2) for i in range(len(self.__in_a))]
+        dc_da2 = [self.l3_weights * dc_dz3[i] for i in range(len(self.__in_a))]
         da2_dz2 = [self.__a2[i] > 0 for i in range(len(self.__a2))]
         dc_dz2 = [np.multiply(dc_da2[i], da2_dz2[i]) for i in range(len(self.__a2))]
-        dc_da1_flat = [np.matmul(np.transpose(self.l2_weights), dc_dz2[i]) for i in range(len(in_activations))]
-        dc_da1 = [np.reshape(dc_da1_flat[i], (self.board_size, self.board_size)) for i in range(len(in_activations))]
+        dc_da1_flat = [np.matmul(np.transpose(self.l2_weights), dc_dz2[i]) for i in range(len(self.__in_a))]
+        dc_da1 = [np.reshape(dc_da1_flat[i], (self.board_size, self.board_size)) for i in range(len(self.__in_a))]
         da1_dz1 = [self.__a1[i] > 0 for i in range(len(self.__a1))]
         dc_dz1 = [np.multiply(dc_da1[i], da1_dz1[i]) for i in range(len(self.__a1))]
         dc_da_prev = []
-        for i in range(len(in_activations)):
+        for i in range(len(self.__in_a)):
             dc_da_prev_example = np.zeros((len(self.l1_kernels), self.board_size, self.board_size))
             for f in range(len(self.l1_kernels)):
                 dc_da_prev_example[f] = dc_dz1[i] * self.l1_kernels[f]
             dc_da_prev.append(dc_da_prev_example)
         self.__update_layer3_params(dc_dz3)
         self.__update_layer2_params(dc_dz2)
-        self.__update_layer1_params(dc_dz1, in_activations)
+        self.__update_layer1_params(dc_dz1)
         return dc_da_prev
 
     def __update_layer3_params(self, dc_dz3):
@@ -74,10 +74,10 @@ class ValueHead:
         self.l2_weights -= hp.LEARNING_RATE * dc_dw
         self.l2_biases -= hp.LEARNING_RATE * sum(dc_dz2)
 
-    def __update_layer1_params(self, dc_dz1, in_activations):
+    def __update_layer1_params(self, dc_dz1):
         for f in range(len(self.l1_kernels)):
             dc_dk = 0
             for x in range(len(dc_dz1)):
-                dc_dk += np.sum(dc_dz1[x] * in_activations[x][f])
+                dc_dk += np.sum(dc_dz1[x] * self.__in_a[x][f])
             self.l1_kernels[f] -= hp.LEARNING_RATE * dc_dk
         self.l1_bias -= hp.LEARNING_RATE * np.sum(dc_dz1)

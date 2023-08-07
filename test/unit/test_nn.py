@@ -6,6 +6,10 @@ import src.nn.hyperparams as hp
 import nnops_ext
 
 
+def loss(a, pi):
+    return [-2*(pi[i] - a[i]) for i in range(len(a))]
+
+
 class TestNeuralNet(unittest.TestCase):
     def test_correlate_even(self):
         arr1 = np.array([[1, 2, 3, 4],
@@ -70,11 +74,6 @@ class TestNeuralNet(unittest.TestCase):
         self.assertTrue(np.array_equal(nnops_ext.correlate(arr1, arr2, 2), expected_result))
 
     def test_conv_block_sgd(self):
-        class LastLayer:
-            @staticmethod
-            def sgd(a, pi, _):
-                return [-2*(pi[i] - a[i]) for i in range(len(a))]
-
         conv = ConvolutionalBlock(2, 2)
         k11 = np.array([[-1., -2., 3.], [1., 3., -1.], [-1., 0., 0.]])
         k12 = np.array([[-2., 2., 2.], [-3., 0., -2.], [-1., -3., 1.]])
@@ -82,10 +81,10 @@ class TestNeuralNet(unittest.TestCase):
         k22 = np.array([[2., -2., -3.], [-1., 2., 3.], [-2., 3., -1.]])
         conv.kernels = [[np.copy(k11), np.copy(k12)], [np.copy(k21), np.copy(k22)]]
         conv.biases = [2, -1]
-        conv.to = [LastLayer()]
         in_activations = [np.array([[[-2, 1, -2], [-3, 3, 3], [-3, -2, 2]], [[0, 1, 0], [-3, 1, 3], [-1, -3, -3]]])]
         target_policies = [np.array([[[0, 2, 0], [1, 3, 2], [3, 3, 0]], [[2, 2, 1], [3, 2, 1], [1, 2, 0]]])]
-        dc_da = conv.sgd(in_activations, target_policies, None)
+        out_activations = conv.feedforward(in_activations)
+        dc_da = conv.backprop(loss(out_activations, target_policies))
 
         # check dc_da
         expected_result = np.array([[[-140., 88., -68.],
@@ -118,11 +117,6 @@ class TestNeuralNet(unittest.TestCase):
         self.assertTrue(conv.biases[1] == -1 - hp.LEARNING_RATE * 66)
 
     def test_res_block_sgd(self):
-        class LastLayer:
-            @staticmethod
-            def sgd(a, pi, _):
-                return [-2*(pi[i] - a[i]) for i in range(len(a))]
-
         res = ResidualBlock(2)
         k1_11 = np.array([[-2., -2., -3.], [-2., 3., -1.], [-3., 0., -3.]])
         k1_12 = np.array([[1., 2., -2.], [2., -1., 0.], [1., 2., -1.]])
@@ -136,10 +130,10 @@ class TestNeuralNet(unittest.TestCase):
         k2_22 = np.array([[1., 0., -1.], [-3., 2., -2.], [-3., 2., -3.]])
         res.kernels2 = [[np.copy(k2_11), np.copy(k2_12)], [np.copy(k2_21), np.copy(k2_22)]]
         res.biases2 = [-1, 1]
-        res.to = [LastLayer()]
         in_activations = [np.array([[[1, 0, 2], [0, 0, 1], [3, 1, 3]], [[0, 0, 3], [2, 1, 1], [1, -1, 1]]])]
         target_policies = [np.array([[[2, 1, 0], [0, 2, 0], [1, 3, 3]], [[0, 3, 0], [3, 2, 3], [1, 1, 0]]])]
-        dc_da = res.sgd(in_activations, target_policies, None)
+        out_activations = res.feedforward(in_activations)
+        dc_da = res.backprop(loss(out_activations, target_policies))
 
         # check dc_da
         expected_result = np.array([[[380, -274, 1314],

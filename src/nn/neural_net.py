@@ -6,7 +6,10 @@ import src.nn.hyperparams as hp
 
 
 class NeuralNet:
-    head = None
+    conv = None
+    res = []
+    pol = None
+    val = None
 
     # TODO: L2 regularization
     # TODO: Batch Norm (can get rid of biases once this is implemented)
@@ -16,21 +19,22 @@ class NeuralNet:
                  filters=hp.FILTERS,
                  board_size=hp.BOARD_SIZE,
                  raw=False):
-        conv = ConvolutionalBlock(in_filters=input_channels, out_filters=filters)
-        res = [ResidualBlock(filters=filters) for _ in range(residual_blocks)]
-        conv.to = [res[0]]
-        for i in range(residual_blocks - 1):
-            res[i].to = [res[i+1]]
-        pol = PolicyHead(in_filters=filters, board_size=board_size, raw=raw)
-        val = ValueHead(in_filters=filters, board_size=board_size)
-        res[-1].to = [pol, val]
-        self.head = conv
+        self.conv = ConvolutionalBlock(in_filters=input_channels, out_filters=filters)
+        self.res = [ResidualBlock(filters=filters) for _ in range(residual_blocks)]
+        self.pol = PolicyHead(in_filters=filters, board_size=board_size, raw=raw)
+        self.val = ValueHead(in_filters=filters, board_size=board_size)
 
     def feedforward(self, in_activations):
-        return self.head.feedforward(in_activations)
+        x = self.conv.feedforward(in_activations)
+        for r in self.res:
+            x = r.feedforward(x)
+        return [self.pol.feedforward(x), self.val.feedforward(x)]
 
-    def sgd(self, examples):
-        self.head.sgd(examples[0], examples[1], examples[2])
+    def backprop(self, pi, z):
+        err = self.pol.backprop(pi) + self.val.backprop(z)
+        for r in reversed(self.res):
+            err = r.backprop(err)
+        return self.conv.backprop(err)
 
     def create_checkpoint(self):
         return

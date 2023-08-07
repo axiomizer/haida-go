@@ -23,6 +23,7 @@ class PolicyHead:
         self.raw = raw
 
     def __activate(self, in_activations):
+        self.__in_a = in_activations
         self.__a1 = []
         for in_a in in_activations:
             in_shape = np.shape(in_a)
@@ -42,25 +43,24 @@ class PolicyHead:
         else:
             return self.__p
 
-    def sgd(self, in_activations, target_policies, _):
+    def backprop(self, target_policies):
         for pi in target_policies:
             if not math.isclose(sum(pi), 1):
                 # dc_da2 assumes this
                 raise ValueError('target policy (pi) must sum to 1. actual sum was {}'.format(sum(pi)))
-        self.__activate(in_activations)
-        dc_da2 = [(self.__p[i] - target_policies[i]) / len(in_activations) for i in range(len(in_activations))]
-        dc_da1_flat = [np.matmul(np.transpose(self.weights), dc_da2[i]) for i in range(len(in_activations))]
-        dc_da1 = [np.reshape(dc_da1_flat[i], (2, self.board_size, self.board_size)) for i in range(len(in_activations))]
+        dc_da2 = [(self.__p[i] - target_policies[i]) / len(self.__in_a) for i in range(len(self.__in_a))]
+        dc_da1_flat = [np.matmul(np.transpose(self.weights), dc_da2[i]) for i in range(len(self.__in_a))]
+        dc_da1 = [np.reshape(dc_da1_flat[i], (2, self.board_size, self.board_size)) for i in range(len(self.__in_a))]
         da1_dz1 = [self.__a1[i] > 0 for i in range(len(self.__a1))]
         dc_dz1 = [np.multiply(dc_da1[i], da1_dz1[i]) for i in range(len(self.__a1))]
         dc_da_prev = []
-        for i in range(len(in_activations)):
+        for i in range(len(self.__in_a)):
             dc_da_prev_example = np.zeros((len(self.kernels), self.board_size, self.board_size))
             for f in range(len(self.kernels)):
                 dc_da_prev_example[f] = sum([dc_dz1[i][fp] * self.kernels[f][fp] for fp in range(len(self.kernels[f]))])
             dc_da_prev.append(dc_da_prev_example)
         self.__update_layer2_params(dc_da2)
-        self.__update_layer1_params(dc_dz1, in_activations)
+        self.__update_layer1_params(dc_dz1)
         return dc_da_prev
 
     def __update_layer2_params(self, dc_da2):
@@ -73,12 +73,12 @@ class PolicyHead:
             dc_db += dc_da2[i]
         self.biases2 -= hp.LEARNING_RATE * dc_db
 
-    def __update_layer1_params(self, dc_dz1, in_activations):
+    def __update_layer1_params(self, dc_dz1):
         for i in range(len(self.kernels)):
             for j in range(len(self.kernels[i])):
                 dc_dk = 0
                 for x in range(len(dc_dz1)):
-                    dc_dk += np.sum(dc_dz1[x][j] * in_activations[x][i])
+                    dc_dk += np.sum(dc_dz1[x][j] * self.__in_a[x][i])
                 self.kernels[i][j] -= hp.LEARNING_RATE * dc_dk
         for i in range(len(self.kernels[0])):
             dc_db = 0

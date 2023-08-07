@@ -14,38 +14,36 @@ class ConvolutionalBlock:
         self.biases = np.random.randn(out_filters)
 
     def __activate(self, in_activations):
-        a = []
+        self.__in_a = in_activations
+        self.__a = []
         for in_a in in_activations:
             conv = op.correlate_all_kernels(in_a, self.kernels)
             for f in range(len(self.kernels[0])):
                 conv[f] += self.biases[f]
-            a.append(op.rectify(conv))
-        return a
+            self.__a.append(op.rectify(conv))
 
     def feedforward(self, in_activations):
-        a = self.__activate(in_activations)
-        return self.to[0].feedforward(a)
+        self.__activate(in_activations)
+        return self.__a
 
-    def sgd(self, in_activations, target_policies, target_values):
-        a = self.__activate(in_activations)
-        dc_da = self.to[0].sgd(a, target_policies, target_values)
-        da_dz = [a[i] > 0 for i in range(len(a))]
-        dc_dz = [np.multiply(dc_da[i], da_dz[i]) for i in range(len(a))]
+    def backprop(self, dc_da):
+        da_dz = [self.__a[i] > 0 for i in range(len(self.__a))]
+        dc_dz = [np.multiply(dc_da[i], da_dz[i]) for i in range(len(self.__a))]
         dc_da_prev = [op.correlate_all_kernels(x, op.invert_kernels(self.kernels)) for x in dc_dz]
-        self.__update_params(in_activations, dc_dz)
+        self.__update_params(dc_dz)
         return dc_da_prev
 
-    def __update_params(self, in_activations, dc_dz):
+    def __update_params(self, dc_dz):
         # weights
         for i in range(len(self.kernels)):
             for j in range(len(self.kernels[0])):
                 dc_dw = np.zeros((3, 3))
-                for x in range(len(in_activations)):
-                    dc_dw += nnops_ext.correlate(in_activations[x][i], dc_dz[x][j], 1)
+                for x in range(len(self.__in_a)):
+                    dc_dw += nnops_ext.correlate(self.__in_a[x][i], dc_dz[x][j], 1)
                 self.kernels[i][j] -= hp.LEARNING_RATE * dc_dw
         # biases
         for i in range(len(self.kernels[0])):
             dc_db = 0
-            for x in range(len(in_activations)):
+            for x in range(len(self.__in_a)):
                 dc_db += np.sum(dc_dz[x][i])
             self.biases[i] -= hp.LEARNING_RATE * dc_db

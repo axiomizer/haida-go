@@ -21,7 +21,9 @@ def pipeline():
         new_training_examples = MCTS.self_play(checkpoints[best], EPISODES, SIMULATIONS)
         examples.put(new_training_examples)
 
-        nn.sgd(examples.get_minibatch())
+        minibatch = examples.get_minibatch()
+        nn.feedforward(minibatch[0])
+        nn.backprop(minibatch[1], minibatch[2])
         training_steps += 1
 
         if training_steps % STEPS_PER_CHECKPOINT is 0:

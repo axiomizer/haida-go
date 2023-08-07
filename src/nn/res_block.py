@@ -20,6 +20,7 @@ class ResidualBlock:
         self.biases2 = np.random.randn(filters)
 
     def __activate(self, in_activations):
+        self.__in_a = in_activations
         self.__a1 = []
         for in_a in in_activations:
             conv = op.correlate_all_kernels(in_a, self.kernels1)
@@ -35,25 +36,19 @@ class ResidualBlock:
 
     def feedforward(self, in_activations):
         self.__activate(in_activations)
-        if len(self.to) == 1:
-            return self.to[0].feedforward(self.__a2)
-        else:
-            return [self.to[i].feedforward(self.__a2) for i in range(len(self.to))]
+        return self.__a2
 
-    def sgd(self, in_activations, target_policies, target_values):
-        self.__activate(in_activations)
-        dc_da2s = [self.to[i].sgd(self.__a2, target_policies, target_values) for i in range(len(self.to))]
-        dc_da2 = [sum(x) for x in zip(*dc_da2s)]
+    def backprop(self, dc_da2):
         da2_dz2 = [self.__a2[i] > 0 for i in range(len(self.__a2))]
         dc_dz2 = [np.multiply(dc_da2[i], da2_dz2[i]) for i in range(len(self.__a2))]
         dc_da1 = [op.correlate_all_kernels(x, op.invert_kernels(self.kernels2)) for x in dc_dz2]
         da1_dz1 = [self.__a1[i] > 0 for i in range(len(self.__a1))]
         dc_dz1 = [np.multiply(dc_da1[i], da1_dz1[i]) for i in range(len(self.__a1))]
         dc_da_prev = []
-        for i in range(len(in_activations)):
+        for i in range(len(self.__in_a)):
             dc_da_prev.append(op.correlate_all_kernels(dc_dz1[i], op.invert_kernels(self.kernels1)) + dc_dz2[i])
         self.__update_params(self.__a1, dc_dz2, self.kernels2, self.biases2)
-        self.__update_params(in_activations, dc_dz1, self.kernels1, self.biases1)
+        self.__update_params(self.__in_a, dc_dz1, self.kernels1, self.biases1)
         return dc_da_prev
 
     @staticmethod
