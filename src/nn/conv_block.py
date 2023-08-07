@@ -5,15 +5,16 @@ import nnops_ext
 
 
 class ConvolutionalBlock:
-    to = None
     kernels = []
     biases = []
+    __in_a = None
+    __a = None
 
     def __init__(self, in_filters=hp.INPUT_PLANES, out_filters=hp.FILTERS):
         self.kernels = [[np.random.randn(3, 3) for _ in range(out_filters)] for _ in range(in_filters)]
         self.biases = np.random.randn(out_filters)
 
-    def __activate(self, in_activations):
+    def feedforward(self, in_activations):
         self.__in_a = in_activations
         self.__a = []
         for in_a in in_activations:
@@ -21,9 +22,6 @@ class ConvolutionalBlock:
             for f in range(len(self.kernels[0])):
                 conv[f] += self.biases[f]
             self.__a.append(op.rectify(conv))
-
-    def feedforward(self, in_activations):
-        self.__activate(in_activations)
         return self.__a
 
     def backprop(self, dc_da):

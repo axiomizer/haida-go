@@ -5,11 +5,11 @@ import nnops_ext
 
 
 class ResidualBlock:
-    to = []
     kernels1 = []
     biases1 = None
     kernels2 = []
     biases2 = None
+    __in_a = None
     __a1 = []
     __a2 = []
 
@@ -19,7 +19,7 @@ class ResidualBlock:
         self.kernels2 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
         self.biases2 = np.random.randn(filters)
 
-    def __activate(self, in_activations):
+    def feedforward(self, in_activations):
         self.__in_a = in_activations
         self.__a1 = []
         for in_a in in_activations:
@@ -33,9 +33,6 @@ class ResidualBlock:
             for f in range(len(self.kernels2[0])):
                 conv[f] += self.biases2[f]
             self.__a2.append(op.rectify(conv + in_activations[i]))
-
-    def feedforward(self, in_activations):
-        self.__activate(in_activations)
         return self.__a2
 
     def backprop(self, dc_da2):

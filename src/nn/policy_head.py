@@ -10,6 +10,7 @@ class PolicyHead:
     biases1 = None
     weights = None  # BOARD_SIZE^2 * 2 -> BOARD_SIZE^2 + 1 (indexed as [to][from])
     biases2 = []
+    __in_a = None  # input activations
     __a1 = []  # activations of convolutional layer
     __a2 = []  # activations of fully-connected linear layer (logit probabilities)
     __p = []  # output after softmax
@@ -22,7 +23,7 @@ class PolicyHead:
         self.biases2 = np.random.randn((board_size ** 2) + 1)
         self.raw = raw
 
-    def __activate(self, in_activations):
+    def feedforward(self, in_activations):
         self.__in_a = in_activations
         self.__a1 = []
         for in_a in in_activations:
@@ -35,9 +36,6 @@ class PolicyHead:
         for i in range(len(in_activations)):
             self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases2)
         self.__p = [op.softmax(a) for a in self.__a2]
-
-    def feedforward(self, in_activations):
-        self.__activate(in_activations)
         if self.raw:
             return self.__a2
         else:

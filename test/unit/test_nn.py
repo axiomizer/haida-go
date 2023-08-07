@@ -6,7 +6,7 @@ import src.nn.hyperparams as hp
 import nnops_ext
 
 
-def loss(a, pi):
+def loss_derivative(a, pi):
     return [-2*(pi[i] - a[i]) for i in range(len(a))]
 
 
@@ -84,7 +84,7 @@ class TestNeuralNet(unittest.TestCase):
         in_activations = [np.array([[[-2, 1, -2], [-3, 3, 3], [-3, -2, 2]], [[0, 1, 0], [-3, 1, 3], [-1, -3, -3]]])]
         target_policies = [np.array([[[0, 2, 0], [1, 3, 2], [3, 3, 0]], [[2, 2, 1], [3, 2, 1], [1, 2, 0]]])]
         out_activations = conv.feedforward(in_activations)
-        dc_da = conv.backprop(loss(out_activations, target_policies))
+        dc_da = conv.backprop(loss_derivative(out_activations, target_policies))
 
         # check dc_da
         expected_result = np.array([[[-140., 88., -68.],
@@ -133,7 +133,7 @@ class TestNeuralNet(unittest.TestCase):
         in_activations = [np.array([[[1, 0, 2], [0, 0, 1], [3, 1, 3]], [[0, 0, 3], [2, 1, 1], [1, -1, 1]]])]
         target_policies = [np.array([[[2, 1, 0], [0, 2, 0], [1, 3, 3]], [[0, 3, 0], [3, 2, 3], [1, 1, 0]]])]
         out_activations = res.feedforward(in_activations)
-        dc_da = res.backprop(loss(out_activations, target_policies))
+        dc_da = res.backprop(loss_derivative(out_activations, target_policies))
 
         # check dc_da
         expected_result = np.array([[[380, -274, 1314],

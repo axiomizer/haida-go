@@ -31,7 +31,11 @@ class NeuralNet:
         return [self.pol.feedforward(x), self.val.feedforward(x)]
 
     def backprop(self, pi, z):
-        err = self.pol.backprop(pi) + self.val.backprop(z)
+        pol_err = self.pol.backprop(pi)
+        val_err = self.val.backprop(z)
+        if len(pol_err) != len(val_err):
+            raise ValueError("mismatched batch sizes?")
+        err = [pol_err[i] + val_err[i] for i in range(len(pol_err))]
         for r in reversed(self.res):
             err = r.backprop(err)
         return self.conv.backprop(err)

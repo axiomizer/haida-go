@@ -16,6 +16,13 @@ class TorchConvBlock(torch.nn.Sequential):
         haida_conv.biases = np.copy(self[0].bias.detach().numpy())
         return haida_conv
 
+    def compare_params(self, haida_conv):
+        weights = torch.transpose(self[0].weight, 0, 1).detach().numpy()
+        biases = self[0].bias.detach().numpy()
+        w_same = np.allclose(weights, haida_conv.kernels)
+        b_same = np.allclose(biases, haida_conv.biases)
+        return w_same and b_same
+
 
 class TorchResBlock(torch.nn.Module):
     def __init__(self, channels):
@@ -36,6 +43,17 @@ class TorchResBlock(torch.nn.Module):
         haida_res.biases2 = np.copy(self.conv2.bias.detach().numpy())
         return haida_res
 
+    def compare_params(self, haida_res):
+        weights1 = torch.transpose(self.conv1.weight, 0, 1).detach().numpy()
+        biases1 = self.conv1.bias.detach().numpy()
+        weights2 = torch.transpose(self.conv2.weight, 0, 1).detach().numpy()
+        biases2 = self.conv2.bias.detach().numpy()
+        w1_same = np.allclose(weights1, haida_res.kernels1)
+        b1_same = np.allclose(biases1, haida_res.biases1)
+        w2_same = np.allclose(weights2, haida_res.kernels2)
+        b2_same = np.allclose(biases2, haida_res.biases2)
+        return w1_same and b1_same and w2_same and b2_same
+
 
 class TorchPolHead(torch.nn.Sequential):
     def __init__(self, input_channels, board_size):
@@ -54,6 +72,17 @@ class TorchPolHead(torch.nn.Sequential):
         haida_pol.weights = np.copy(self[3].weight.detach().numpy())
         haida_pol.biases2 = np.copy(self[3].bias.detach().numpy())
         return haida_pol
+
+    def compare_params(self, haida_pol):
+        weights1 = torch.transpose(self[0].weight, 0, 1).detach().numpy()
+        biases1 = self[0].bias.detach().numpy()
+        weights2 = self[3].weight.detach().numpy()
+        biases2 = self[3].bias.detach().numpy()
+        w1_same = np.allclose(weights1, haida_pol.kernels)
+        b1_same = np.allclose(biases1, haida_pol.biases1)
+        w2_same = np.allclose(weights2, haida_pol.weights)
+        b2_same = np.allclose(biases2, haida_pol.biases2)
+        return w1_same and b1_same and w2_same and b2_same
 
 
 class TorchValHead(torch.nn.Sequential):
@@ -79,12 +108,27 @@ class TorchValHead(torch.nn.Sequential):
         haida_val.l3_bias = self[5].bias.detach().numpy()[0]
         return haida_val
 
+    def compare_params(self, haida_val):
+        weights1 = np.ndarray.flatten(self[0].weight.detach().numpy())
+        bias1 = self[0].bias.detach().numpy()[0]
+        weights2 = self[3].weight.detach().numpy()
+        biases2 = self[3].bias.detach().numpy()
+        weights3 = np.ndarray.flatten(self[5].weight.detach().numpy())
+        bias3 = self[5].bias.detach().numpy()[0]
+        w1_same = np.allclose(weights1, haida_val.l1_kernels)
+        b1_same = np.allclose(bias1, haida_val.l1_bias)
+        w2_same = np.allclose(weights2, haida_val.l2_weights)
+        b2_same = np.allclose(biases2, haida_val.l2_biases)
+        w3_same = np.allclose(weights3, haida_val.l3_weights)
+        b3_same = np.allclose(bias3, haida_val.l3_bias)
+        return w1_same and b1_same and w2_same and b2_same and w3_same and b3_same
+
 
 class TorchNet(torch.nn.Module):
     def __init__(self, residual_blocks, input_channels, filters, board_size):
         super().__init__()
         self.conv_block = TorchConvBlock(input_channels, filters)
-        self.res_blocks = [TorchResBlock(filters) for _ in range(residual_blocks)]
+        self.res_blocks = torch.nn.ModuleList([TorchResBlock(filters) for _ in range(residual_blocks)])
         self.pol_head = TorchPolHead(filters, board_size)
         self.val_head = TorchValHead(filters, board_size)
 
@@ -103,3 +147,11 @@ class TorchNet(torch.nn.Module):
         haida_net.pol = self.pol_head.copy_to_haida()
         haida_net.val = self.val_head.copy_to_haida()
         return haida_net
+
+    def compare_params(self, haida_net):
+        conv_same = self.conv_block.compare_params(haida_net.conv)
+        res_count_same = len(self.res_blocks) == len(haida_net.res)
+        res_same = [self.res_blocks[i].compare_params(haida_net.res[i]) for i in range(len(self.res_blocks))]
+        pol_same = self.pol_head.compare_params(haida_net.pol)
+        val_same = self.val_head.compare_params(haida_net.val)
+        return conv_same and res_count_same and all(res_same) and pol_same and val_same

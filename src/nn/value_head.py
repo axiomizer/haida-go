@@ -10,6 +10,10 @@ class ValueHead:
     l2_biases = None
     l3_weights = None
     l3_bias = None
+    __in_a = None
+    __a1 = None
+    __a2 = None
+    __v = None
 
     def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE):
         self.board_size = board_size
@@ -20,7 +24,7 @@ class ValueHead:
         self.l3_weights = np.random.randn(256)
         self.l3_bias = np.random.randn()
 
-    def __activate(self, in_activations):
+    def feedforward(self, in_activations):
         self.__in_a = in_activations
         self.__a1 = []
         for in_a in in_activations:
@@ -34,9 +38,6 @@ class ValueHead:
         for i in range(len(in_activations)):
             z = np.dot(self.l3_weights, self.__a2[i]) + self.l3_bias
             self.__v.append(np.tanh(z))
-
-    def feedforward(self, in_activations):
-        self.__activate(in_activations)
         return self.__v
 
     def backprop(self, target_values):
