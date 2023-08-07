@@ -38,8 +38,7 @@ class ResidualBlock:
         if len(self.to) == 1:
             return self.to[0].feedforward(self.__a2)
         else:
-            result = [self.to[i].feedforward(self.__a2) for i in range(len(self.to))]
-            return [list(i) for i in zip(*result)]
+            return [self.to[i].feedforward(self.__a2) for i in range(len(self.to))]
 
     def sgd(self, in_activations, target_policies, target_values):
         self.__activate(in_activations)

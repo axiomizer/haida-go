@@ -5,6 +5,7 @@ from src.nn.operations import op
 
 
 class PolicyHead:
+    raw = False
     kernels = []  # indexed as [from][to]
     biases1 = None
     weights = None  # BOARD_SIZE^2 * 2 -> BOARD_SIZE^2 + 1 (indexed as [to][from])
@@ -13,12 +14,13 @@ class PolicyHead:
     __a2 = []  # activations of fully-connected linear layer (logit probabilities)
     __p = []  # output after softmax
 
-    def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE):
+    def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE, raw=False):
         self.board_size = board_size
         self.kernels = [[np.random.randn() for _ in range(2)] for _ in range(in_filters)]
         self.biases1 = np.random.randn(2)
         self.weights = np.random.randn((board_size ** 2) + 1, (board_size ** 2) * 2)
         self.biases2 = np.random.randn((board_size ** 2) + 1)
+        self.raw = raw
 
     def __activate(self, in_activations):
         self.__a1 = []
@@ -33,9 +35,9 @@ class PolicyHead:
             self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases2)
         self.__p = [op.softmax(a) for a in self.__a2]
 
-    def feedforward(self, in_activations, raw=False):
+    def feedforward(self, in_activations):
         self.__activate(in_activations)
-        if raw:
+        if self.raw:
             return self.__a2
         else:
             return self.__p

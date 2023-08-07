@@ -24,11 +24,11 @@ class ConvolutionalBlock:
 
     def feedforward(self, in_activations):
         a = self.__activate(in_activations)
-        return self.to.feedforward(a)
+        return self.to[0].feedforward(a)
 
     def sgd(self, in_activations, target_policies, target_values):
         a = self.__activate(in_activations)
-        dc_da = self.to.sgd(a, target_policies, target_values)
+        dc_da = self.to[0].sgd(a, target_policies, target_values)
         da_dz = [a[i] > 0 for i in range(len(a))]
         dc_dz = [np.multiply(dc_da[i], da_dz[i]) for i in range(len(a))]
         dc_da_prev = [op.correlate_all_kernels(x, op.invert_kernels(self.kernels)) for x in dc_dz]

@@ -82,7 +82,7 @@ class TestNeuralNet(unittest.TestCase):
         k22 = np.array([[2., -2., -3.], [-1., 2., 3.], [-2., 3., -1.]])
         conv.kernels = [[np.copy(k11), np.copy(k12)], [np.copy(k21), np.copy(k22)]]
         conv.biases = [2, -1]
-        conv.to = LastLayer()
+        conv.to = [LastLayer()]
         in_activations = [np.array([[[-2, 1, -2], [-3, 3, 3], [-3, -2, 2]], [[0, 1, 0], [-3, 1, 3], [-1, -3, -3]]])]
         target_policies = [np.array([[[0, 2, 0], [1, 3, 2], [3, 3, 0]], [[2, 2, 1], [3, 2, 1], [1, 2, 0]]])]
         dc_da = conv.sgd(in_activations, target_policies, None)
