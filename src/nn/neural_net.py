@@ -6,13 +6,9 @@ import src.nn.hyperparams as hp
 
 
 class NeuralNet:
-    conv = None
-    res = []
-    pol = None
-    val = None
-
     # TODO: L2 regularization
     # TODO: Batch Norm (can get rid of biases once this is implemented)
+    # TODO: momentum
     def __init__(self,
                  residual_blocks=hp.RESIDUAL_BLOCKS,
                  input_channels=hp.INPUT_PLANES,

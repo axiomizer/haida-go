@@ -7,6 +7,7 @@ class TorchConvBlock(torch.nn.Sequential):
     def __init__(self, input_channels, output_channels):
         super().__init__(
             torch.nn.Conv2d(input_channels, output_channels, 3, padding=1, dtype=torch.float64),
+            torch.nn.BatchNorm2d(output_channels, dtype=torch.float64),
             torch.nn.ReLU()
         )
 
@@ -17,23 +18,25 @@ class TorchConvBlock(torch.nn.Sequential):
         return haida_conv
 
     def compare_params(self, haida_conv):
-        weights = torch.transpose(self[0].weight, 0, 1).detach().numpy()
-        biases = self[0].bias.detach().numpy()
-        w_same = np.allclose(weights, haida_conv.kernels)
-        b_same = np.allclose(biases, haida_conv.biases)
-        return w_same and b_same
+        weight_same = np.allclose(torch.transpose(self[0].weight, 0, 1).detach().numpy(), haida_conv.kernels)
+        bias_same = np.allclose(self[0].bias.detach().numpy(), haida_conv.biases)
+        gamma_same = np.allclose(self[1].weight.detach().numpy(), haida_conv.bn.gamma)
+        beta_same = np.allclose(self[1].bias.detach().numpy(), haida_conv.bn.beta)
+        return weight_same and bias_same and gamma_same and beta_same
 
 
 class TorchResBlock(torch.nn.Module):
     def __init__(self, channels):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(channels, channels, 3, padding=1, dtype=torch.float64)
+        self.bn1 = torch.nn.BatchNorm2d(channels, dtype=torch.float64)
         self.conv2 = torch.nn.Conv2d(channels, channels, 3, padding=1, dtype=torch.float64)
+        self.bn2 = torch.nn.BatchNorm2d(channels, dtype=torch.float64)
 
     def forward(self, x):
         skip = x
-        x = torch.nn.functional.relu(self.conv1(x))
-        return torch.nn.functional.relu(self.conv2(x) + skip)
+        x = torch.nn.functional.relu(self.bn1(self.conv1(x)))
+        return torch.nn.functional.relu(self.bn2(self.conv2(x)) + skip)
 
     def copy_to_haida(self):
         haida_res = ResidualBlock(self.conv1.in_channels)
@@ -44,21 +47,22 @@ class TorchResBlock(torch.nn.Module):
         return haida_res
 
     def compare_params(self, haida_res):
-        weights1 = torch.transpose(self.conv1.weight, 0, 1).detach().numpy()
-        biases1 = self.conv1.bias.detach().numpy()
-        weights2 = torch.transpose(self.conv2.weight, 0, 1).detach().numpy()
-        biases2 = self.conv2.bias.detach().numpy()
-        w1_same = np.allclose(weights1, haida_res.kernels1)
-        b1_same = np.allclose(biases1, haida_res.biases1)
-        w2_same = np.allclose(weights2, haida_res.kernels2)
-        b2_same = np.allclose(biases2, haida_res.biases2)
-        return w1_same and b1_same and w2_same and b2_same
+        w1_same = np.allclose(torch.transpose(self.conv1.weight, 0, 1).detach().numpy(), haida_res.kernels1)
+        b1_same = np.allclose(self.conv1.bias.detach().numpy(), haida_res.biases1)
+        gamma1_same = np.allclose(self.bn1.weight.detach().numpy(), haida_res.bn1.gamma)
+        beta1_same = np.allclose(self.bn1.bias.detach().numpy(), haida_res.bn1.beta)
+        w2_same = np.allclose(torch.transpose(self.conv2.weight, 0, 1).detach().numpy(), haida_res.kernels2)
+        b2_same = np.allclose(self.conv2.bias.detach().numpy(), haida_res.biases2)
+        gamma2_same = np.allclose(self.bn2.weight.detach().numpy(), haida_res.bn2.gamma)
+        beta2_same = np.allclose(self.bn2.bias.detach().numpy(), haida_res.bn2.beta)
+        return w1_same and b1_same and gamma1_same and beta1_same and w2_same and b2_same and gamma2_same and beta2_same
 
 
 class TorchPolHead(torch.nn.Sequential):
     def __init__(self, input_channels, board_size):
         super().__init__(
             torch.nn.Conv2d(input_channels, 2, 1, dtype=torch.float64),
+            torch.nn.BatchNorm2d(2, dtype=torch.float64),
             torch.nn.ReLU(),
             torch.nn.Flatten(),
             torch.nn.Linear((board_size ** 2) * 2, (board_size ** 2) + 1, dtype=torch.float64)
@@ -69,20 +73,18 @@ class TorchPolHead(torch.nn.Sequential):
         haida_pol = PolicyHead(in_filters=self[0].in_channels, board_size=self.board_size, raw=True)
         haida_pol.kernels = np.copy(torch.transpose(self[0].weight, 0, 1).detach().numpy())
         haida_pol.biases1 = np.copy(self[0].bias.detach().numpy())
-        haida_pol.weights = np.copy(self[3].weight.detach().numpy())
-        haida_pol.biases2 = np.copy(self[3].bias.detach().numpy())
+        haida_pol.weights = np.copy(self[4].weight.detach().numpy())
+        haida_pol.biases2 = np.copy(self[4].bias.detach().numpy())
         return haida_pol
 
     def compare_params(self, haida_pol):
-        weights1 = torch.transpose(self[0].weight, 0, 1).detach().numpy()
-        biases1 = self[0].bias.detach().numpy()
-        weights2 = self[3].weight.detach().numpy()
-        biases2 = self[3].bias.detach().numpy()
-        w1_same = np.allclose(weights1, haida_pol.kernels)
-        b1_same = np.allclose(biases1, haida_pol.biases1)
-        w2_same = np.allclose(weights2, haida_pol.weights)
-        b2_same = np.allclose(biases2, haida_pol.biases2)
-        return w1_same and b1_same and w2_same and b2_same
+        w1_same = np.allclose(torch.transpose(self[0].weight, 0, 1).detach().numpy(), haida_pol.kernels)
+        b1_same = np.allclose(self[0].bias.detach().numpy(), haida_pol.biases1)
+        gamma_same = np.allclose(self[1].weight.detach().numpy(), haida_pol.bn.gamma)
+        beta_same = np.allclose(self[1].bias.detach().numpy(), haida_pol.bn.beta)
+        w2_same = np.allclose(self[4].weight.detach().numpy(), haida_pol.weights)
+        b2_same = np.allclose(self[4].bias.detach().numpy(), haida_pol.biases2)
+        return w1_same and b1_same and gamma_same and beta_same and w2_same and b2_same
 
 
 class TorchValHead(torch.nn.Sequential):

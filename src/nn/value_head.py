@@ -3,26 +3,21 @@ import numpy as np
 from src.nn.operations import op
 
 
+# TODO: implement batch norm for value head
 class ValueHead:
-    l1_kernels = []
-    l1_bias = None
-    l2_weights = None  # BOARD_SIZE^2 -> 256 (indexed as [to][from])
-    l2_biases = None
-    l3_weights = None
-    l3_bias = None
-    __in_a = None
-    __a1 = None
-    __a2 = None
-    __v = None
-
     def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE):
         self.board_size = board_size
         self.l1_kernels = np.random.randn(in_filters)
         self.l1_bias = np.random.randn()
-        self.l2_weights = np.random.randn(256, board_size ** 2)
+        self.l2_weights = np.random.randn(256, board_size ** 2)  # indexed as [to][from]
         self.l2_biases = np.random.randn(256)
         self.l3_weights = np.random.randn(256)
         self.l3_bias = np.random.randn()
+
+        self.__in_a = None
+        self.__a1 = None
+        self.__a2 = None
+        self.__v = None
 
     def feedforward(self, in_activations):
         self.__in_a = in_activations

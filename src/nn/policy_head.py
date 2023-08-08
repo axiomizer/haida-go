@@ -2,36 +2,40 @@ import math
 import src.nn.hyperparams as hp
 import numpy as np
 from src.nn.operations import op
+from src.nn.batch_norm import BatchNorm
 
 
 class PolicyHead:
-    raw = False
-    kernels = []  # indexed as [from][to]
-    biases1 = None
-    weights = None  # BOARD_SIZE^2 * 2 -> BOARD_SIZE^2 + 1 (indexed as [to][from])
-    biases2 = []
-    __in_a = None  # input activations
-    __a1 = []  # activations of convolutional layer
-    __a2 = []  # activations of fully-connected linear layer (logit probabilities)
-    __p = []  # output after softmax
-
     def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE, raw=False):
+        self.raw = raw
         self.board_size = board_size
+
+        # convolutional layer; kernels indexed as [from][to]
         self.kernels = [[np.random.randn() for _ in range(2)] for _ in range(in_filters)]
         self.biases1 = np.random.randn(2)
+
+        # batch norm
+        self.bn = BatchNorm(filters=2)
+
+        # fully-connected linear layer: weights indexed as [to][from]
         self.weights = np.random.randn((board_size ** 2) + 1, (board_size ** 2) * 2)
         self.biases2 = np.random.randn((board_size ** 2) + 1)
-        self.raw = raw
+
+        self.__in_a = None  # input activations
+        self.__a1 = None  # output activations of convolutional layer
+        self.__a2 = None  # output activations of fully-connected linear layer (logit probabilities)
+        self.__p = None  # output after softmax
 
     def feedforward(self, in_activations):
         self.__in_a = in_activations
-        self.__a1 = []
+        z = []
         for in_a in in_activations:
             in_shape = np.shape(in_a)
             conv = np.zeros((2, in_shape[1], in_shape[2]))
             for f in range(len(self.kernels[0])):
                 conv[f] = sum([in_a[i] * self.kernels[i][f] for i in range(len(self.kernels))]) + self.biases1[f]
-            self.__a1.append(op.rectify(conv))
+            z.append(conv)
+        self.__a1 = [op.rectify(z_hat) for z_hat in self.bn.feedforward(z)]
         self.__a2 = []
         for i in range(len(in_activations)):
             self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases2)
@@ -42,15 +46,16 @@ class PolicyHead:
             return self.__p
 
     def backprop(self, target_policies):
+        # the formula for dc_da2 is only valid if the target policy sums to 1
         for pi in target_policies:
             if not math.isclose(sum(pi), 1):
-                # dc_da2 assumes this
                 raise ValueError('target policy (pi) must sum to 1. actual sum was {}'.format(sum(pi)))
         dc_da2 = [(self.__p[i] - target_policies[i]) / len(self.__in_a) for i in range(len(self.__in_a))]
         dc_da1_flat = [np.matmul(np.transpose(self.weights), dc_da2[i]) for i in range(len(self.__in_a))]
         dc_da1 = [np.reshape(dc_da1_flat[i], (2, self.board_size, self.board_size)) for i in range(len(self.__in_a))]
-        da1_dz1 = [self.__a1[i] > 0 for i in range(len(self.__a1))]
-        dc_dz1 = [np.multiply(dc_da1[i], da1_dz1[i]) for i in range(len(self.__a1))]
+        da1_dz1_hat = [self.__a1[i] > 0 for i in range(len(self.__a1))]
+        dc_dz1_hat = [np.multiply(dc_da1[i], da1_dz1_hat[i]) for i in range(len(self.__a1))]
+        dc_dz1 = self.bn.backprop(dc_dz1_hat)
         dc_da_prev = []
         for i in range(len(self.__in_a)):
             dc_da_prev_example = np.zeros((len(self.kernels), self.board_size, self.board_size))
