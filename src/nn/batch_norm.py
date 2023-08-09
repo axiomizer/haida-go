@@ -17,8 +17,6 @@ class BatchNorm:
         self.__variance = None
         self.__num_samples = 0
 
-        # TODO: running averages
-
     def feedforward(self, x):
         batch_size = len(x)
         self.__x = x

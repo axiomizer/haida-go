@@ -5,7 +5,6 @@ from src.nn.batch_norm import BatchNorm
 import nnops_ext
 
 
-# TODO: make linear layers and convolutional layers separate classes to avoid redundant code
 class ConvolutionalBlock:
     def __init__(self, in_filters=hp.INPUT_PLANES, out_filters=hp.FILTERS):
         self.kernels = [[np.random.randn(3, 3) for _ in range(out_filters)] for _ in range(in_filters)]

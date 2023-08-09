@@ -3,7 +3,6 @@ import numpy as np
 from src.nn.operations import op
 
 
-# TODO: implement batch norm for value head
 class ValueHead:
     def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE):
         self.board_size = board_size

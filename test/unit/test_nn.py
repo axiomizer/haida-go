@@ -113,7 +113,6 @@ class TestNN(unittest.TestCase):
         # compare gradient with respect to input
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
-    # TODO: have this test do multiple training steps
     def test_full_net(self):
         torch_net = torchnet.TorchNet(self.residual_blocks, self.input_channels, self.filters, self.board_size)
         haida_net = torch_net.copy_to_haida()
