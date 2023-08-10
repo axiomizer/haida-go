@@ -12,14 +12,13 @@ class PolicyHead:
 
         # convolutional layer; kernels indexed as [from][to]
         self.kernels = [[np.random.randn() for _ in range(2)] for _ in range(in_filters)]
-        self.biases1 = np.random.randn(2)
 
         # batch norm
         self.bn = BatchNorm(filters=2)
 
         # fully-connected linear layer: weights indexed as [to][from]
         self.weights = np.random.randn((board_size ** 2) + 1, (board_size ** 2) * 2)
-        self.biases2 = np.random.randn((board_size ** 2) + 1)
+        self.biases = np.random.randn((board_size ** 2) + 1)
 
         self.__in_a = None  # input activations
         self.__a1 = None  # output activations of convolutional layer
@@ -33,12 +32,12 @@ class PolicyHead:
             in_shape = np.shape(in_a)
             conv = np.zeros((2, in_shape[1], in_shape[2]))
             for f in range(len(self.kernels[0])):
-                conv[f] = sum([in_a[i] * self.kernels[i][f] for i in range(len(self.kernels))]) + self.biases1[f]
+                conv[f] = sum([in_a[i] * self.kernels[i][f] for i in range(len(self.kernels))])
             z.append(conv)
         self.__a1 = [op.rectify(z_hat) for z_hat in self.bn.feedforward(z)]
         self.__a2 = []
         for i in range(len(in_activations)):
-            self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases2)
+            self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases)
         self.__p = [op.softmax(a) for a in self.__a2]
         if self.raw:
             return self.__a2
@@ -74,7 +73,7 @@ class PolicyHead:
         dc_db = np.zeros(len(self.weights))
         for i in range(len(dc_da2)):
             dc_db += dc_da2[i]
-        self.biases2 -= hp.LEARNING_RATE * dc_db
+        self.biases -= hp.LEARNING_RATE * dc_db
 
     def __update_layer1_params(self, dc_dz1):
         for i in range(len(self.kernels)):
@@ -83,8 +82,3 @@ class PolicyHead:
                 for x in range(len(dc_dz1)):
                     dc_dk += np.sum(dc_dz1[x][j] * self.__in_a[x][i])
                 self.kernels[i][j] -= hp.LEARNING_RATE * dc_dk
-        for i in range(len(self.kernels[0])):
-            dc_db = 0
-            for x in range(len(dc_dz1)):
-                dc_db += np.sum(dc_dz1[x][i])
-            self.biases1[i] -= hp.LEARNING_RATE * dc_db

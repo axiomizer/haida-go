@@ -8,7 +8,6 @@ class ValueHead:
     def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE):
         self.board_size = board_size
         self.l1_kernels = np.random.randn(in_filters)
-        self.l1_bias = np.random.randn()
         self.bn = BatchNorm(filters=1)
         self.l2_weights = np.random.randn(256, board_size ** 2)  # indexed as [to][from]
         self.l2_biases = np.random.randn(256)
@@ -24,7 +23,7 @@ class ValueHead:
         self.__in_a = in_activations
         z = []
         for in_a in in_activations:
-            conv = sum([in_a[i] * self.l1_kernels[i] for i in range(len(self.l1_kernels))]) + self.l1_bias
+            conv = sum([in_a[i] * self.l1_kernels[i] for i in range(len(self.l1_kernels))])
             z.append(np.expand_dims(conv, 0))
         self.__a1 = [op.rectify(np.squeeze(z_hat)) for z_hat in self.bn.feedforward(z)]
         self.__a2 = []
@@ -79,4 +78,3 @@ class ValueHead:
             for x in range(len(dc_dz1)):
                 dc_dk += np.sum(dc_dz1[x] * self.__in_a[x][f])
             self.l1_kernels[f] -= hp.LEARNING_RATE * dc_dk
-        self.l1_bias -= hp.LEARNING_RATE * np.sum(dc_dz1)
