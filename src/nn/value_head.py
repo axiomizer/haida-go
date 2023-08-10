@@ -1,6 +1,7 @@
 import src.nn.hyperparams as hp
 import numpy as np
 from src.nn.operations import op
+from src.nn.batch_norm import BatchNorm
 
 
 class ValueHead:
@@ -8,6 +9,7 @@ class ValueHead:
         self.board_size = board_size
         self.l1_kernels = np.random.randn(in_filters)
         self.l1_bias = np.random.randn()
+        self.bn = BatchNorm(filters=1)
         self.l2_weights = np.random.randn(256, board_size ** 2)  # indexed as [to][from]
         self.l2_biases = np.random.randn(256)
         self.l3_weights = np.random.randn(256)
@@ -20,10 +22,11 @@ class ValueHead:
 
     def feedforward(self, in_activations):
         self.__in_a = in_activations
-        self.__a1 = []
+        z = []
         for in_a in in_activations:
             conv = sum([in_a[i] * self.l1_kernels[i] for i in range(len(self.l1_kernels))]) + self.l1_bias
-            self.__a1.append(op.rectify(conv))
+            z.append(np.expand_dims(conv, 0))
+        self.__a1 = [op.rectify(np.squeeze(z_hat)) for z_hat in self.bn.feedforward(z)]
         self.__a2 = []
         for i in range(len(in_activations)):
             z = np.matmul(self.l2_weights, self.__a1[i].flatten()) + self.l2_biases
@@ -42,8 +45,9 @@ class ValueHead:
         dc_dz2 = [np.multiply(dc_da2[i], da2_dz2[i]) for i in range(len(self.__a2))]
         dc_da1_flat = [np.matmul(np.transpose(self.l2_weights), dc_dz2[i]) for i in range(len(self.__in_a))]
         dc_da1 = [np.reshape(dc_da1_flat[i], (self.board_size, self.board_size)) for i in range(len(self.__in_a))]
-        da1_dz1 = [self.__a1[i] > 0 for i in range(len(self.__a1))]
-        dc_dz1 = [np.multiply(dc_da1[i], da1_dz1[i]) for i in range(len(self.__a1))]
+        da1_dz1_hat = [self.__a1[i] > 0 for i in range(len(self.__a1))]
+        dc_dz1_hat = [np.expand_dims(np.multiply(dc_da1[i], da1_dz1_hat[i]), 0) for i in range(len(self.__a1))]
+        dc_dz1 = [np.squeeze(dc_dz1_ex) for dc_dz1_ex in self.bn.backprop(dc_dz1_hat)]
         dc_da_prev = []
         for i in range(len(self.__in_a)):
             dc_da_prev_example = np.zeros((len(self.l1_kernels), self.board_size, self.board_size))

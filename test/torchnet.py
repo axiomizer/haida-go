@@ -91,6 +91,7 @@ class TorchValHead(torch.nn.Sequential):
     def __init__(self, input_channels, board_size):
         super().__init__(
             torch.nn.Conv2d(input_channels, 1, 1, dtype=torch.float64),
+            torch.nn.BatchNorm2d(1, dtype=torch.float64),
             torch.nn.ReLU(),
             torch.nn.Flatten(),
             torch.nn.Linear(board_size ** 2, 256, dtype=torch.float64),
@@ -104,26 +105,22 @@ class TorchValHead(torch.nn.Sequential):
         haida_val = ValueHead(in_filters=self[0].in_channels, board_size=self.board_size)
         haida_val.l1_kernels = np.ndarray.flatten(self[0].weight.detach().numpy())
         haida_val.l1_bias = self[0].bias.detach().numpy()[0]
-        haida_val.l2_weights = np.copy(self[3].weight.detach().numpy())
-        haida_val.l2_biases = np.copy(self[3].bias.detach().numpy())
-        haida_val.l3_weights = np.ndarray.flatten(self[5].weight.detach().numpy())
-        haida_val.l3_bias = self[5].bias.detach().numpy()[0]
+        haida_val.l2_weights = np.copy(self[4].weight.detach().numpy())
+        haida_val.l2_biases = np.copy(self[4].bias.detach().numpy())
+        haida_val.l3_weights = np.ndarray.flatten(self[6].weight.detach().numpy())
+        haida_val.l3_bias = self[6].bias.detach().numpy()[0]
         return haida_val
 
     def compare_params(self, haida_val):
-        weights1 = np.ndarray.flatten(self[0].weight.detach().numpy())
-        bias1 = self[0].bias.detach().numpy()[0]
-        weights2 = self[3].weight.detach().numpy()
-        biases2 = self[3].bias.detach().numpy()
-        weights3 = np.ndarray.flatten(self[5].weight.detach().numpy())
-        bias3 = self[5].bias.detach().numpy()[0]
-        w1_same = np.allclose(weights1, haida_val.l1_kernels)
-        b1_same = np.allclose(bias1, haida_val.l1_bias)
-        w2_same = np.allclose(weights2, haida_val.l2_weights)
-        b2_same = np.allclose(biases2, haida_val.l2_biases)
-        w3_same = np.allclose(weights3, haida_val.l3_weights)
-        b3_same = np.allclose(bias3, haida_val.l3_bias)
-        return w1_same and b1_same and w2_same and b2_same and w3_same and b3_same
+        w1_same = np.allclose(np.ndarray.flatten(self[0].weight.detach().numpy()), haida_val.l1_kernels)
+        b1_same = np.allclose(self[0].bias.detach().numpy()[0], haida_val.l1_bias)
+        gamma_same = np.allclose(self[1].weight.detach().numpy(), haida_val.bn.gamma)
+        beta_same = np.allclose(self[1].bias.detach().numpy(), haida_val.bn.beta)
+        w2_same = np.allclose(self[4].weight.detach().numpy(), haida_val.l2_weights)
+        b2_same = np.allclose(self[4].bias.detach().numpy(), haida_val.l2_biases)
+        w3_same = np.allclose(np.ndarray.flatten(self[6].weight.detach().numpy()), haida_val.l3_weights)
+        b3_same = np.allclose(self[6].bias.detach().numpy()[0], haida_val.l3_bias)
+        return w1_same and b1_same and gamma_same and beta_same and w2_same and b2_same and w3_same and b3_same
 
 
 class TorchNet(torch.nn.Module):
