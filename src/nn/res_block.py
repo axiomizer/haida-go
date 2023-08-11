@@ -48,4 +48,4 @@ class ResidualBlock:
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(activations)):
                     dc_dw += nnops_ext.correlate(activations[x][i], dc_dz[x][j], 1)
-                kernels[i][j] -= hp.LEARNING_RATE * dc_dw
+                kernels[i][j] -= hp.LEARNING_RATE * (dc_dw + 2 * hp.WEIGHT_DECAY * kernels[i][j])

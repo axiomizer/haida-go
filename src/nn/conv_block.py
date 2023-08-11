@@ -32,4 +32,4 @@ class ConvolutionalBlock:
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(self.__in_a)):
                     dc_dw += nnops_ext.correlate(self.__in_a[x][i], dc_dz[x][j], 1)
-                self.kernels[i][j] -= hp.LEARNING_RATE * dc_dw
+                self.kernels[i][j] -= hp.LEARNING_RATE * (dc_dw + 2 * hp.WEIGHT_DECAY * self.kernels[i][j])

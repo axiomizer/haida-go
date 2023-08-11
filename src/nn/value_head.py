@@ -62,19 +62,19 @@ class ValueHead:
         dc_dw = np.zeros(len(self.l3_weights))
         for i in range(len(dc_dz3)):
             dc_dw += dc_dz3[i] * self.__a2[i]
-        self.l3_weights -= hp.LEARNING_RATE * dc_dw
-        self.l3_bias -= hp.LEARNING_RATE * sum(dc_dz3)
+        self.l3_weights -= hp.LEARNING_RATE * (dc_dw + 2 * hp.WEIGHT_DECAY * self.l3_weights)
+        self.l3_bias -= hp.LEARNING_RATE * (sum(dc_dz3) + 2 * hp.WEIGHT_DECAY * self.l3_bias)
 
     def __update_layer2_params(self, dc_dz2):
         dc_dw = np.zeros((len(self.l2_weights), len(self.l2_weights[0])))
         for i in range(len(dc_dz2)):
             dc_dw += np.outer(dc_dz2[i], self.__a1[i])
-        self.l2_weights -= hp.LEARNING_RATE * dc_dw
-        self.l2_biases -= hp.LEARNING_RATE * sum(dc_dz2)
+        self.l2_weights -= hp.LEARNING_RATE * (dc_dw + 2 * hp.WEIGHT_DECAY * self.l2_weights)
+        self.l2_biases -= hp.LEARNING_RATE * (sum(dc_dz2) + 2 * hp.WEIGHT_DECAY * self.l2_biases)
 
     def __update_layer1_params(self, dc_dz1):
         for f in range(len(self.l1_kernels)):
             dc_dk = 0
             for x in range(len(dc_dz1)):
                 dc_dk += np.sum(dc_dz1[x] * self.__in_a[x][f])
-            self.l1_kernels[f] -= hp.LEARNING_RATE * dc_dk
+            self.l1_kernels[f] -= hp.LEARNING_RATE * (dc_dk + 2 * hp.WEIGHT_DECAY * self.l1_kernels[f])

@@ -4,7 +4,7 @@ from math import sqrt
 
 
 class BatchNorm:
-    def __init__(self, filters=hp.FILTERS, epsilon=hp.BATCHNORM_EPS):
+    def __init__(self, filters=hp.FILTERS, epsilon=hp.BATCHNORM_EPSILON):
         self.gamma = np.ones(filters)
         self.beta = np.zeros(filters)
         self.filters = filters
@@ -47,8 +47,8 @@ class BatchNorm:
                 dc_dx_hat[b][f] = err[b][f] * self.gamma[f]
                 dc_dgamma += np.sum(err[b][f] * self.__x_hat[b][f])
                 dc_dbeta += np.sum(err[b][f])
-            self.gamma[f] -= hp.LEARNING_RATE * dc_dgamma
-            self.beta[f] -= hp.LEARNING_RATE * dc_dbeta
+            self.gamma[f] -= hp.LEARNING_RATE * (dc_dgamma + 2 * hp.WEIGHT_DECAY * self.gamma[f])
+            self.beta[f] -= hp.LEARNING_RATE * (dc_dbeta + 2 * hp.WEIGHT_DECAY * self.beta[f])
             dc_dvariance = 0
             factor = (-1 / 2) * ((self.__variance[f] + self.epsilon) ** (-3 / 2))
             for b in range(len(err)):

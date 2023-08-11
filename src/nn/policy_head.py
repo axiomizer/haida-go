@@ -69,11 +69,11 @@ class PolicyHead:
         dc_dw = np.zeros((len(self.weights), len(self.weights[0])))
         for i in range(len(dc_da2)):
             dc_dw += np.outer(dc_da2[i], self.__a1[i])
-        self.weights -= hp.LEARNING_RATE * dc_dw
+        self.weights -= hp.LEARNING_RATE * (dc_dw + 2 * hp.WEIGHT_DECAY * self.weights)
         dc_db = np.zeros(len(self.weights))
         for i in range(len(dc_da2)):
             dc_db += dc_da2[i]
-        self.biases -= hp.LEARNING_RATE * dc_db
+        self.biases -= hp.LEARNING_RATE * (dc_db + 2 * hp.WEIGHT_DECAY * self.biases)
 
     def __update_layer1_params(self, dc_dz1):
         for i in range(len(self.kernels)):
@@ -81,4 +81,4 @@ class PolicyHead:
                 dc_dk = 0
                 for x in range(len(dc_dz1)):
                     dc_dk += np.sum(dc_dz1[x][j] * self.__in_a[x][i])
-                self.kernels[i][j] -= hp.LEARNING_RATE * dc_dk
+                self.kernels[i][j] -= hp.LEARNING_RATE * (dc_dk + 2 * hp.WEIGHT_DECAY * self.kernels[i][j])
