@@ -1,20 +1,19 @@
-import math
-import src.nn.hyperparams as hp
+from math import isclose
 import numpy as np
 from src.nn.operations import op
 from src.nn.batch_norm import BatchNorm
 
 
 class PolicyHead:
-    def __init__(self, in_filters=hp.FILTERS, board_size=hp.BOARD_SIZE, raw=False):
-        self.raw = raw
+    def __init__(self, in_filters, board_size, config):
+        self.cfg = config
         self.board_size = board_size
 
         # convolutional layer; kernels indexed as [from][to]
         self.kernels = [[np.random.randn() for _ in range(2)] for _ in range(in_filters)]
 
         # batch norm
-        self.bn = BatchNorm(filters=2)
+        self.bn = BatchNorm(2, config)
 
         # fully-connected linear layer: weights indexed as [to][from]
         self.weights = np.random.randn((board_size ** 2) + 1, (board_size ** 2) * 2)
@@ -39,15 +38,12 @@ class PolicyHead:
         for i in range(len(in_activations)):
             self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases)
         self.__p = [op.softmax(a) for a in self.__a2]
-        if self.raw:
-            return self.__a2
-        else:
-            return self.__p
+        return self.__p
 
     def backprop(self, target_policies):
         # the formula for dc_da2 is only valid if the target policy sums to 1
         for pi in target_policies:
-            if not math.isclose(sum(pi), 1):
+            if not isclose(sum(pi), 1):
                 raise ValueError('target policy (pi) must sum to 1. actual sum was {}'.format(sum(pi)))
         dc_da2 = [(self.__p[i] - target_policies[i]) / len(self.__in_a) for i in range(len(self.__in_a))]
         dc_da1_flat = [np.matmul(np.transpose(self.weights), dc_da2[i]) for i in range(len(self.__in_a))]
@@ -69,11 +65,11 @@ class PolicyHead:
         dc_dw = np.zeros((len(self.weights), len(self.weights[0])))
         for i in range(len(dc_da2)):
             dc_dw += np.outer(dc_da2[i], self.__a1[i])
-        self.weights -= hp.LEARNING_RATE * (dc_dw + 2 * hp.WEIGHT_DECAY * self.weights)
+        self.cfg.theta_update_rule(self.weights, dc_dw)
         dc_db = np.zeros(len(self.weights))
         for i in range(len(dc_da2)):
             dc_db += dc_da2[i]
-        self.biases -= hp.LEARNING_RATE * (dc_db + 2 * hp.WEIGHT_DECAY * self.biases)
+        self.cfg.theta_update_rule(self.biases, dc_db)
 
     def __update_layer1_params(self, dc_dz1):
         for i in range(len(self.kernels)):
@@ -81,4 +77,4 @@ class PolicyHead:
                 dc_dk = 0
                 for x in range(len(dc_dz1)):
                     dc_dk += np.sum(dc_dz1[x][j] * self.__in_a[x][i])
-                self.kernels[i][j] -= hp.LEARNING_RATE * (dc_dk + 2 * hp.WEIGHT_DECAY * self.kernels[i][j])
+                self.cfg.theta_update_rule(self.kernels[i][j], dc_dk)

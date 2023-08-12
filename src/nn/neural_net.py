@@ -2,20 +2,17 @@ from src.nn.conv_block import ConvolutionalBlock
 from src.nn.res_block import ResidualBlock
 from src.nn.policy_head import PolicyHead
 from src.nn.value_head import ValueHead
-import src.nn.hyperparams as hp
+from src.nn.config import Config
 
 
 class NeuralNet:
-    def __init__(self,
-                 residual_blocks=hp.RESIDUAL_BLOCKS,
-                 input_channels=hp.INPUT_PLANES,
-                 filters=hp.FILTERS,
-                 board_size=hp.BOARD_SIZE,
-                 raw=False):
-        self.conv = ConvolutionalBlock(in_filters=input_channels, out_filters=filters)
-        self.res = [ResidualBlock(filters=filters) for _ in range(residual_blocks)]
-        self.pol = PolicyHead(in_filters=filters, board_size=board_size, raw=raw)
-        self.val = ValueHead(in_filters=filters, board_size=board_size)
+    def __init__(self, board_size, residual_blocks=19, input_channels=17, filters=256, config=Config()):
+        self.cfg = config
+
+        self.conv = ConvolutionalBlock(input_channels, filters, config)
+        self.res = [ResidualBlock(filters, config) for _ in range(residual_blocks)]
+        self.pol = PolicyHead(filters, board_size, config)
+        self.val = ValueHead(filters, board_size, config)
 
     def feedforward(self, in_activations):
         x = self.conv.feedforward(in_activations)

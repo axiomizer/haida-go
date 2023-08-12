@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-from src.nn.neural_net import ConvolutionalBlock, ResidualBlock, PolicyHead, ValueHead, NeuralNet
 
 
 class TorchConvBlock(torch.nn.Sequential):
@@ -11,10 +10,8 @@ class TorchConvBlock(torch.nn.Sequential):
             torch.nn.ReLU()
         )
 
-    def copy_to_haida(self):
-        haida_conv = ConvolutionalBlock(self[0].in_channels, self[0].out_channels)
+    def copy_trainable_params(self, haida_conv):
         haida_conv.kernels = np.copy(torch.transpose(self[0].weight, 0, 1).detach().numpy())
-        return haida_conv
 
     def compare_params(self, haida_conv):
         weight_same = np.allclose(torch.transpose(self[0].weight, 0, 1).detach().numpy(), haida_conv.kernels)
@@ -36,11 +33,9 @@ class TorchResBlock(torch.nn.Module):
         x = torch.nn.functional.relu(self.bn1(self.conv1(x)))
         return torch.nn.functional.relu(self.bn2(self.conv2(x)) + skip)
 
-    def copy_to_haida(self):
-        haida_res = ResidualBlock(self.conv1.in_channels)
+    def copy_trainable_params(self, haida_res):
         haida_res.kernels1 = np.copy(torch.transpose(self.conv1.weight, 0, 1).detach().numpy())
         haida_res.kernels2 = np.copy(torch.transpose(self.conv2.weight, 0, 1).detach().numpy())
-        return haida_res
 
     def compare_params(self, haida_res):
         w1_same = np.allclose(torch.transpose(self.conv1.weight, 0, 1).detach().numpy(), haida_res.kernels1)
@@ -63,12 +58,10 @@ class TorchPolHead(torch.nn.Sequential):
         )
         self.board_size = board_size
 
-    def copy_to_haida(self):
-        haida_pol = PolicyHead(in_filters=self[0].in_channels, board_size=self.board_size, raw=True)
+    def copy_trainable_params(self, haida_pol):
         haida_pol.kernels = np.copy(torch.transpose(self[0].weight, 0, 1).detach().numpy())
         haida_pol.weights = np.copy(self[4].weight.detach().numpy())
         haida_pol.biases = np.copy(self[4].bias.detach().numpy())
-        return haida_pol
 
     def compare_params(self, haida_pol):
         w1_same = np.allclose(torch.transpose(self[0].weight, 0, 1).detach().numpy(), haida_pol.kernels)
@@ -93,14 +86,12 @@ class TorchValHead(torch.nn.Sequential):
         )
         self.board_size = board_size
 
-    def copy_to_haida(self):
-        haida_val = ValueHead(in_filters=self[0].in_channels, board_size=self.board_size)
+    def copy_trainable_params(self, haida_val):
         haida_val.l1_kernels = np.ndarray.flatten(self[0].weight.detach().numpy())
         haida_val.l2_weights = np.copy(self[4].weight.detach().numpy())
         haida_val.l2_biases = np.copy(self[4].bias.detach().numpy())
         haida_val.l3_weights = np.ndarray.flatten(self[6].weight.detach().numpy())
-        haida_val.l3_bias = self[6].bias.detach().numpy()[0]
-        return haida_val
+        haida_val.l3_bias = self[6].bias.detach().numpy()
 
     def compare_params(self, haida_val):
         w1_same = np.allclose(np.ndarray.flatten(self[0].weight.detach().numpy()), haida_val.l1_kernels)
@@ -120,6 +111,7 @@ class TorchNet(torch.nn.Module):
         self.res_blocks = torch.nn.ModuleList([TorchResBlock(filters) for _ in range(residual_blocks)])
         self.pol_head = TorchPolHead(filters, board_size)
         self.val_head = TorchValHead(filters, board_size)
+        self.board_size = board_size
 
     def forward(self, x):
         x = self.conv_block.forward(x)
@@ -129,13 +121,12 @@ class TorchNet(torch.nn.Module):
         v = self.val_head.forward(x)
         return p, v
 
-    def copy_to_haida(self):
-        haida_net = NeuralNet()
-        haida_net.conv = self.conv_block.copy_to_haida()
-        haida_net.res = [r.copy_to_haida() for r in self.res_blocks]
-        haida_net.pol = self.pol_head.copy_to_haida()
-        haida_net.val = self.val_head.copy_to_haida()
-        return haida_net
+    def copy_trainable_params(self, haida_net):
+        self.conv_block.copy_trainable_params(haida_net.conv)
+        for torch_r, haida_r in zip(self.res_blocks, haida_net.res):
+            torch_r.copy_trainable_params(haida_r)
+        self.pol_head.copy_trainable_params(haida_net.pol)
+        self.val_head.copy_trainable_params(haida_net.val)
 
     def compare_params(self, haida_net):
         conv_same = self.conv_block.compare_params(haida_net.conv)

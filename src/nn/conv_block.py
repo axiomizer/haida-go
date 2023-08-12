@@ -1,14 +1,16 @@
 import numpy as np
-from src.nn import hyperparams as hp
 from src.nn.operations import op
 from src.nn.batch_norm import BatchNorm
 import nnops_ext
 
 
 class ConvolutionalBlock:
-    def __init__(self, in_filters=hp.INPUT_PLANES, out_filters=hp.FILTERS):
+    def __init__(self, in_filters, out_filters, config):
+        self.cfg = config
+
         self.kernels = [[np.random.randn(3, 3) for _ in range(out_filters)] for _ in range(in_filters)]
-        self.bn = BatchNorm(filters=out_filters)
+        self.bn = BatchNorm(out_filters, config)
+
         self.__in_a = None
         self.__a = None
 
@@ -32,4 +34,4 @@ class ConvolutionalBlock:
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(self.__in_a)):
                     dc_dw += nnops_ext.correlate(self.__in_a[x][i], dc_dz[x][j], 1)
-                self.kernels[i][j] -= hp.LEARNING_RATE * (dc_dw + 2 * hp.WEIGHT_DECAY * self.kernels[i][j])
+                self.cfg.theta_update_rule(self.kernels[i][j], dc_dw)

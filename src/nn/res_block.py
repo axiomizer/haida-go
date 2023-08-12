@@ -1,16 +1,18 @@
 import numpy as np
-import src.nn.hyperparams as hp
 from src.nn.operations import op
 from src.nn.batch_norm import BatchNorm
 import nnops_ext
 
 
 class ResidualBlock:
-    def __init__(self, filters=hp.FILTERS):
+    def __init__(self, filters, config):
+        self.cfg = config
+
         self.kernels1 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
-        self.bn1 = BatchNorm(filters=filters)
+        self.bn1 = BatchNorm(filters, config)
         self.kernels2 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
-        self.bn2 = BatchNorm(filters=filters)
+        self.bn2 = BatchNorm(filters, config)
+
         self.__in_a = None
         self.__a1 = None
         self.__a2 = None
@@ -41,11 +43,10 @@ class ResidualBlock:
         self.__update_params(self.__in_a, dc_dz1, self.kernels1)
         return dc_da_prev
 
-    @staticmethod
-    def __update_params(activations, dc_dz, kernels):
+    def __update_params(self, activations, dc_dz, kernels):
         for i in range(len(kernels)):
             for j in range(len(kernels[0])):
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(activations)):
                     dc_dw += nnops_ext.correlate(activations[x][i], dc_dz[x][j], 1)
-                kernels[i][j] -= hp.LEARNING_RATE * (dc_dw + 2 * hp.WEIGHT_DECAY * kernels[i][j])
+                self.cfg.theta_update_rule(kernels[i][j], dc_dw)
