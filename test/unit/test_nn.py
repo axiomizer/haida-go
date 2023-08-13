@@ -5,21 +5,12 @@ import unittest
 from src.nn.operations import op
 from src.nn.config import Config
 from src.nn.neural_net import ConvolutionalBlock, ResidualBlock, PolicyHead, ValueHead, NeuralNet
-
-INPUT_CHANNELS = 17
-FILTERS = 16  # 256
-RESIDUAL_BLOCKS = 19
-BOARD_SIZE = 19
-MINIBATCH_SIZE = 4  # 32 per worker
-
-
-def mse_derivative(a, pi):
-    return [(-2 / (pi[i].size * len(a))) * (pi[i] - a[i]) for i in range(len(a))]
+from test.unit.config import *
 
 
 class TestNN(unittest.TestCase):
     def test_conv(self):
-        cfg = Config()
+        cfg = Config(learning_rate=LEARNING_RATE)
         torch_conv = torchnet.TorchConvBlock(INPUT_CHANNELS, FILTERS)
         haida_conv = ConvolutionalBlock(INPUT_CHANNELS, FILTERS, cfg)
         torch_conv.copy_trainable_params(haida_conv)
@@ -34,7 +25,7 @@ class TestNN(unittest.TestCase):
         # do one step of SGD for both nets and compare results
         np_target = np.random.randn(MINIBATCH_SIZE, FILTERS, BOARD_SIZE, BOARD_SIZE)
         loss = torch.nn.MSELoss(reduction='mean')
-        optimizer = torch.optim.SGD(torch_conv.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay*2)
+        optimizer = torch.optim.SGD(torch_conv.parameters(), lr=LEARNING_RATE)
         optimizer.zero_grad()
         loss(torch_results, torch.tensor(np_target, dtype=torch.float64)).backward()
         optimizer.step()
@@ -45,7 +36,7 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_res(self):
-        cfg = Config()
+        cfg = Config(learning_rate=LEARNING_RATE)
         torch_res = torchnet.TorchResBlock(FILTERS)
         haida_res = ResidualBlock(FILTERS, cfg)
         torch_res.copy_trainable_params(haida_res)
@@ -60,7 +51,7 @@ class TestNN(unittest.TestCase):
         # do one step of SGD for both nets and compare results
         np_target = np.random.randn(MINIBATCH_SIZE, FILTERS, BOARD_SIZE, BOARD_SIZE)
         loss = torch.nn.MSELoss(reduction='mean')
-        optimizer = torch.optim.SGD(torch_res.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay*2)
+        optimizer = torch.optim.SGD(torch_res.parameters(), lr=LEARNING_RATE)
         optimizer.zero_grad()
         loss(torch_results, torch.tensor(np_target, dtype=torch.float64)).backward()
         optimizer.step()
@@ -71,7 +62,7 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_pol(self):
-        cfg = Config()
+        cfg = Config(learning_rate=LEARNING_RATE)
         torch_pol = torchnet.TorchPolHead(FILTERS, BOARD_SIZE)
         haida_pol = PolicyHead(FILTERS, BOARD_SIZE, cfg)
         torch_pol.copy_trainable_params(haida_pol)
@@ -87,7 +78,7 @@ class TestNN(unittest.TestCase):
         raw_target = torch.randn(MINIBATCH_SIZE, (BOARD_SIZE ** 2) + 1, dtype=torch.float64)
         target = torch.nn.functional.softmax(raw_target, dim=1, dtype=torch.float64)
         loss = torch.nn.CrossEntropyLoss()
-        optimizer = torch.optim.SGD(torch_pol.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay*2)
+        optimizer = torch.optim.SGD(torch_pol.parameters(), lr=LEARNING_RATE)
         optimizer.zero_grad()
         loss(torch_results, target).backward()
         optimizer.step()
@@ -98,7 +89,7 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_val(self):
-        cfg = Config()
+        cfg = Config(learning_rate=LEARNING_RATE)
         torch_val = torchnet.TorchValHead(FILTERS, BOARD_SIZE)
         haida_val = ValueHead(FILTERS, BOARD_SIZE, cfg)
         torch_val.copy_trainable_params(haida_val)
@@ -113,7 +104,7 @@ class TestNN(unittest.TestCase):
         # do one step of SGD for both nets and compare results
         target = torch.randn(MINIBATCH_SIZE, 1, dtype=torch.float64)
         loss = torch.nn.MSELoss(reduction='mean')
-        optimizer = torch.optim.SGD(torch_val.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay*2)
+        optimizer = torch.optim.SGD(torch_val.parameters(), lr=LEARNING_RATE)
         optimizer.zero_grad()
         loss(torch_results, target).backward()
         optimizer.step()
@@ -124,7 +115,7 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_full_net(self):
-        cfg = Config(weight_decay=0.1)  # set weight_decay to a larger value so that it has a notable effect
+        cfg = Config(learning_rate=LEARNING_RATE)
         torch_net = torchnet.TorchNet(RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS, BOARD_SIZE)
         haida_net = NeuralNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS, cfg)
         torch_net.copy_trainable_params(haida_net)
@@ -143,7 +134,7 @@ class TestNN(unittest.TestCase):
         z = torch.randn(MINIBATCH_SIZE, 1, dtype=torch.float64)
         loss1 = torch.nn.CrossEntropyLoss()
         loss2 = torch.nn.MSELoss(reduction='mean')
-        optimizer = torch.optim.SGD(torch_net.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay*2)
+        optimizer = torch.optim.SGD(torch_net.parameters(), lr=LEARNING_RATE)
         optimizer.zero_grad()
         total_loss = loss1(torch_results[0], pi) + loss2(torch_results[1], z)
         total_loss.backward()

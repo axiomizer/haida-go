@@ -6,8 +6,8 @@ from src.nn.config import Config
 
 
 class NeuralNet:
-    def __init__(self, board_size, residual_blocks=19, input_channels=17, filters=256, config=Config()):
-        self.cfg = config
+    def __init__(self, board_size, residual_blocks, input_channels, filters, config=None):
+        self.cfg = config or Config()
 
         self.conv = ConvolutionalBlock(input_channels, filters, config)
         self.res = [ResidualBlock(filters, config) for _ in range(residual_blocks)]
@@ -21,6 +21,11 @@ class NeuralNet:
         return [self.pol.feedforward(x), self.val.feedforward(x)]
 
     def backprop(self, pi, z):
+        ret = self.__backprop(pi, z)
+        self.cfg.step_lr_sched()
+        return ret
+
+    def __backprop(self, pi, z):
         pol_err = self.pol.backprop(pi)
         val_err = self.val.backprop(z)
         if len(pol_err) != len(val_err):
