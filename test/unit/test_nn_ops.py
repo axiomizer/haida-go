@@ -7,7 +7,7 @@ def loss_derivative(a, pi):
     return [-2*(pi[i] - a[i]) for i in range(len(a))]
 
 
-class TestOperations(unittest.TestCase):
+class TestNNOperations(unittest.TestCase):
     def test_correlate_even(self):
         arr1 = np.array([[1, 2, 3, 4],
                          [4, 4, 4, 0],
