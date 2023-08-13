@@ -91,7 +91,7 @@ class TorchValHead(torch.nn.Sequential):
         haida_val.l2_weights = np.copy(self[4].weight.detach().numpy())
         haida_val.l2_biases = np.copy(self[4].bias.detach().numpy())
         haida_val.l3_weights = np.ndarray.flatten(self[6].weight.detach().numpy())
-        haida_val.l3_bias = self[6].bias.detach().numpy()
+        haida_val.l3_bias = np.copy(self[6].bias.detach().numpy())
 
     def compare_params(self, haida_val):
         w1_same = np.allclose(np.ndarray.flatten(self[0].weight.detach().numpy()), haida_val.l1_kernels)
