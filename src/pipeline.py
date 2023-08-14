@@ -1,8 +1,7 @@
 import evaluator
 import MCTS
-from nn.neural_net import NeuralNet
+from nn.haida_net import HaidaNet
 import random
-from src.nn.config import Config
 
 BOARD_SIZE = 19
 MINIBATCH_SIZE = 32  # 32 on each of 64 workers; 2048 total
@@ -21,7 +20,7 @@ WEIGHT_DECAY = 0.0001
 
 
 def pipeline():
-    nn = NeuralNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS)
+    nn = HaidaNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS)
     nn.configure(lr_sched=LR_SCHED, weight_decay=WEIGHT_DECAY)
     checkpoints = [nn.checkpoint()]
     best = 0  # index of best checkpoint

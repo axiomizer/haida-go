@@ -5,7 +5,7 @@ from src.nn.value_head import ValueHead
 from src.nn.shared import AbstractNet
 
 
-class NeuralNet(AbstractNet):
+class HaidaNet(AbstractNet):
     def __init__(self, board_size, residual_blocks, input_channels, filters, config=None):
         super().__init__(config)
 

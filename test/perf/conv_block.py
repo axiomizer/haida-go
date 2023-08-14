@@ -6,8 +6,8 @@ import time
 from test.perf.progress_bar import ProgressBar
 from test.perf import pickler
 from test.perf.performance_unit import PerformanceUnit
-from test import torchnet
-from src.nn.neural_net import ConvolutionalBlock
+from test import torch_net
+from src.nn.haida_net import ConvolutionalBlock
 
 
 class ConvolutionalBlockFeedforwardUnit(PerformanceUnit):
@@ -36,7 +36,7 @@ class ConvolutionalBlockFeedforwardUnit(PerformanceUnit):
                                              range(len(self.o_vals)),
                                              range(len(self.b_vals)),
                                              range(len(self.mb_vals))):
-            torch_conv = torchnet.TorchConvBlock(self.i_vals[i], self.o_vals[o])
+            torch_conv = torch_net.TorchConvBlock(self.i_vals[i], self.o_vals[o])
             haida_conv = ConvolutionalBlock(self.i_vals[i], self.o_vals[o])
 
             # time feedforward for both neural nets

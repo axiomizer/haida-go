@@ -1,15 +1,15 @@
-from test import torchnet
+from test.torch_net import TorchConvBlock, TorchResBlock, TorchPolHead, TorchValHead, TorchNet
 import numpy as np
 import torch
 import unittest
 from src.nn.operations import op
-from src.nn.neural_net import ConvolutionalBlock, ResidualBlock, PolicyHead, ValueHead, NeuralNet
+from src.nn.haida_net import ConvolutionalBlock, ResidualBlock, PolicyHead, ValueHead, HaidaNet
 from test.unit.config import *
 
 
 class TestNN(unittest.TestCase):
     def test_conv(self):
-        torch_conv = torchnet.TorchConvBlock(INPUT_CHANNELS, FILTERS)
+        torch_conv = TorchConvBlock(INPUT_CHANNELS, FILTERS)
         haida_conv = ConvolutionalBlock(INPUT_CHANNELS, FILTERS)
         haida_conv.configure(learning_rate=LEARNING_RATE)
         torch_conv.copy_trainable_params(haida_conv)
@@ -35,7 +35,7 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_res(self):
-        torch_res = torchnet.TorchResBlock(FILTERS)
+        torch_res = TorchResBlock(FILTERS)
         haida_res = ResidualBlock(FILTERS)
         haida_res.configure(learning_rate=LEARNING_RATE)
         torch_res.copy_trainable_params(haida_res)
@@ -61,7 +61,7 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_pol(self):
-        torch_pol = torchnet.TorchPolHead(FILTERS, BOARD_SIZE)
+        torch_pol = TorchPolHead(FILTERS, BOARD_SIZE)
         haida_pol = PolicyHead(FILTERS, BOARD_SIZE)
         haida_pol.configure(learning_rate=LEARNING_RATE)
         torch_pol.copy_trainable_params(haida_pol)
@@ -89,7 +89,7 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_val(self):
-        torch_val = torchnet.TorchValHead(FILTERS, BOARD_SIZE)
+        torch_val = TorchValHead(FILTERS, BOARD_SIZE)
         haida_val = ValueHead(FILTERS, BOARD_SIZE)
         haida_val.configure(learning_rate=LEARNING_RATE)
         torch_val.copy_trainable_params(haida_val)
@@ -116,8 +116,8 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_full_net(self):
-        torch_net = torchnet.TorchNet(RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS, BOARD_SIZE)
-        haida_net = NeuralNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS)
+        torch_net = TorchNet(RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS, BOARD_SIZE)
+        haida_net = HaidaNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS)
         haida_net.configure(learning_rate=LEARNING_RATE)
         torch_net.copy_trainable_params(haida_net)
 

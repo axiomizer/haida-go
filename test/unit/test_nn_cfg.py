@@ -1,9 +1,9 @@
-from test import torchnet
+from test.torch_net import TorchResBlock, TorchNet
 import random
 import numpy as np
 import torch
 import unittest
-from src.nn.neural_net import ResidualBlock, NeuralNet
+from src.nn.haida_net import ResidualBlock, HaidaNet
 from test.unit.config import *
 
 
@@ -12,7 +12,7 @@ class TestNNConfig(unittest.TestCase):
         filters = 4
         learning_rates = [10 ** (5 * random.uniform(-1, 0)) for _ in range(10)]
         for lr in learning_rates:
-            torch_res = torchnet.TorchResBlock(filters)
+            torch_res = TorchResBlock(filters)
             haida_res = ResidualBlock(filters)
             haida_res.configure(learning_rate=lr)
             torch_res.copy_trainable_params(haida_res)
@@ -43,7 +43,7 @@ class TestNNConfig(unittest.TestCase):
         # use values for weight_decay large enough to have a notable effect
         weight_decays = [10 ** (3 * random.uniform(-1, 0)) for _ in range(10)]
         for wd in weight_decays:
-            torch_res = torchnet.TorchResBlock(filters)
+            torch_res = TorchResBlock(filters)
             haida_res = ResidualBlock(filters)
             haida_res.configure(learning_rate=learning_rate, weight_decay=wd)
             torch_res.copy_trainable_params(haida_res)
@@ -71,8 +71,8 @@ class TestNNConfig(unittest.TestCase):
     def test_lr_sched(self):
         residual_blocks = 3
         filters = 4
-        torch_net = torchnet.TorchNet(residual_blocks, INPUT_CHANNELS, filters, BOARD_SIZE)
-        haida_net = NeuralNet(BOARD_SIZE, residual_blocks, INPUT_CHANNELS, filters)
+        torch_net = TorchNet(residual_blocks, INPUT_CHANNELS, filters, BOARD_SIZE)
+        haida_net = HaidaNet(BOARD_SIZE, residual_blocks, INPUT_CHANNELS, filters)
         haida_net.configure(lr_sched=[(0, 0.05), (5, 0.005), (10, 0.0005)])
         torch_net.copy_trainable_params(haida_net)
 
