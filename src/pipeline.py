@@ -3,20 +3,26 @@ import MCTS
 from nn.haida_net import HaidaNet
 import random
 
-BOARD_SIZE = 19
-MINIBATCH_SIZE = 32  # 32 on each of 64 workers; 2048 total
+
+STEPS_PER_EPOCH = 1000
+
+# self-play settings
 EPISODES = 250  # 25000
 SIMULATIONS = 16  # 1600
-STEPS_PER_EPOCH = 1000
 GAMES_SAVED = EPISODES * 20
 
+# neural net architecture
+BOARD_SIZE = 19
 RESIDUAL_BLOCKS = 19
 INPUT_CHANNELS = 17
 FILTERS = 256
+
+# other neural net hyperparameters
+MINIBATCH_SIZE = 32  # 32 on each of 64 workers; 2048 total
 LR_SCHED = [(0,      0.01),
             (400000, 0.001),
             (600000, 0.0001)]
-WEIGHT_DECAY = 0.0001
+WEIGHT_DECAY = 0.0001  # l2 regularization parameter
 
 
 def pipeline():
