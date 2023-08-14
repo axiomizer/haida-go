@@ -28,7 +28,7 @@ MOMENTUM = 0.9
 
 def pipeline():
     nn = HaidaNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS)
-    nn.configure(lr_sched=LR_SCHED, weight_decay=WEIGHT_DECAY)
+    nn.configure(lr_sched=LR_SCHED, weight_decay=WEIGHT_DECAY, momentum=MOMENTUM)
     checkpoints = [nn.checkpoint()]
     best = 0  # index of best checkpoint
     examples = TrainingExamples()
