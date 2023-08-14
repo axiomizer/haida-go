@@ -11,11 +11,16 @@ class ValueHead(AbstractNet):
         self.board_size = board_size
 
         self.l1_kernels = np.random.randn(in_filters)
+        self.__l1_dc_dk_runavg = np.zeros(in_filters)
         self.bn = BatchNorm(1, self.cfg)
         self.l2_weights = np.random.randn(256, board_size ** 2)  # indexed as [to][from]
+        self.__l2_dc_dw_runavg = np.zeros((256, board_size ** 2))
         self.l2_biases = np.random.randn(256)
+        self.__l2_dc_db_runavg = np.zeros(256)
         self.l3_weights = np.random.randn(256)
+        self.__l3_dc_dw_runavg = np.zeros(256)
         self.l3_bias = np.random.randn(1)
+        self.__l3_dc_db_runavg = np.zeros(1)
 
         self.__in_a = None
         self.__a1 = None
@@ -67,22 +72,22 @@ class ValueHead(AbstractNet):
         dc_dw = np.zeros(len(self.l3_weights))
         for i in range(len(dc_dz3)):
             dc_dw += dc_dz3[i] * self.__a2[i]
-        self.update_theta(self.l3_weights, dc_dw)
-        self.update_theta(self.l3_bias, sum(dc_dz3))
+        self.update_theta(self.l3_weights, dc_dw, self.__l3_dc_dw_runavg)
+        self.update_theta(self.l3_bias, sum(dc_dz3), self.__l3_dc_db_runavg)
 
     def __update_layer2_params(self, dc_dz2):
         dc_dw = np.zeros((len(self.l2_weights), len(self.l2_weights[0])))
         for i in range(len(dc_dz2)):
             dc_dw += np.outer(dc_dz2[i], self.__a1[i])
-        self.update_theta(self.l2_weights, dc_dw)
-        self.update_theta(self.l2_biases, sum(dc_dz2))
+        self.update_theta(self.l2_weights, dc_dw, self.__l2_dc_dw_runavg)
+        self.update_theta(self.l2_biases, sum(dc_dz2), self.__l2_dc_db_runavg)
 
     def __update_layer1_params(self, dc_dz1):
         dc_dk = np.zeros(self.in_filters)
         for f in range(self.in_filters):
             for x in range(len(dc_dz1)):
                 dc_dk[f] += np.sum(dc_dz1[x] * self.__in_a[x][f])
-        self.update_theta(self.l1_kernels, dc_dk)
+        self.update_theta(self.l1_kernels, dc_dk, self.__l1_dc_dk_runavg)
 
     def checkpoint(self):
         pass

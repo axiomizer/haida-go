@@ -146,3 +146,17 @@ class TestNN(unittest.TestCase):
 
         # compare gradient with respect to input
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
+
+    # just see if we can train haida net without hitting any bugs
+    # all the other tests copy trainable params from pytorch, which has proven capable of hiding bugs
+    def test_no_copy(self):
+        residual_blocks = 3
+        haida_net = HaidaNet(BOARD_SIZE, residual_blocks, INPUT_CHANNELS, FILTERS)
+        for _ in range(3):
+            np_in = np.random.randn(MINIBATCH_SIZE, INPUT_CHANNELS, BOARD_SIZE, BOARD_SIZE)
+            pi_raw = torch.randn(MINIBATCH_SIZE, (BOARD_SIZE ** 2) + 1, dtype=torch.float64)
+            pi = torch.nn.functional.softmax(pi_raw, dim=1, dtype=torch.float64)
+            z = torch.randn(MINIBATCH_SIZE, 1, dtype=torch.float64)
+            minibatch = [np_in, pi.detach().numpy(), np.ndarray.flatten(z.detach().numpy())]
+
+            haida_net.train(minibatch)

@@ -37,6 +37,39 @@ class TestNNConfig(unittest.TestCase):
             # compare gradient with respect to input
             self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
+    def test_lr_sched(self):
+        residual_blocks = 3
+        filters = 4
+        torch_net = TorchNet(residual_blocks, INPUT_CHANNELS, filters, BOARD_SIZE)
+        haida_net = HaidaNet(BOARD_SIZE, residual_blocks, INPUT_CHANNELS, filters)
+        haida_net.configure(lr_sched=[(0, 0.05), (5, 0.005), (10, 0.0005)])
+        torch_net.copy_trainable_params(haida_net)
+
+        loss1 = torch.nn.CrossEntropyLoss()
+        loss2 = torch.nn.MSELoss(reduction='mean')
+        optimizer = torch.optim.SGD(torch_net.parameters(), lr=0.05)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamma=0.1)
+        for _ in range(15):
+            # feedforward
+            np_in = np.random.randn(MINIBATCH_SIZE, INPUT_CHANNELS, BOARD_SIZE, BOARD_SIZE)
+            torch_in = torch.tensor(np_in, dtype=torch.float64, requires_grad=True)
+            torch_results = torch_net(torch_in)
+
+            # do one step of SGD for torch net
+            pi_raw = torch.randn(MINIBATCH_SIZE, (BOARD_SIZE ** 2) + 1, dtype=torch.float64)
+            pi = torch.nn.functional.softmax(pi_raw, dim=1, dtype=torch.float64)
+            z = torch.randn(MINIBATCH_SIZE, 1, dtype=torch.float64)
+            optimizer.zero_grad()
+            total_loss = loss1(torch_results[0], pi) + loss2(torch_results[1], z)
+            total_loss.backward()
+            optimizer.step()
+            scheduler.step()
+
+            # train haida and compare parameters
+            minibatch = [np_in, pi.detach().numpy(), np.ndarray.flatten(z.detach().numpy())]
+            haida_net.train(minibatch)
+            self.assertTrue(torch_net.compare_params(haida_net))
+
     def test_weight_decay(self):
         filters = 4
         learning_rate = 0.1
@@ -68,18 +101,22 @@ class TestNNConfig(unittest.TestCase):
             # compare gradient with respect to input
             self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
-    def test_lr_sched(self):
+    def test_momentum(self):
         residual_blocks = 3
         filters = 4
+        weight_decay = 0.1  # test along with weight_decay since these could interact
+        momentum = 0.9
         torch_net = TorchNet(residual_blocks, INPUT_CHANNELS, filters, BOARD_SIZE)
         haida_net = HaidaNet(BOARD_SIZE, residual_blocks, INPUT_CHANNELS, filters)
-        haida_net.configure(lr_sched=[(0, 0.05), (5, 0.005), (10, 0.0005)])
+        haida_net.configure(learning_rate=LEARNING_RATE, weight_decay=weight_decay, momentum=momentum)
         torch_net.copy_trainable_params(haida_net)
 
         loss1 = torch.nn.CrossEntropyLoss()
         loss2 = torch.nn.MSELoss(reduction='mean')
-        optimizer = torch.optim.SGD(torch_net.parameters(), lr=0.05)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamma=0.1)
+        optimizer = torch.optim.SGD(torch_net.parameters(),
+                                    lr=LEARNING_RATE,
+                                    weight_decay=weight_decay*2,
+                                    momentum=momentum)
         for _ in range(15):
             # feedforward
             np_in = np.random.randn(MINIBATCH_SIZE, INPUT_CHANNELS, BOARD_SIZE, BOARD_SIZE)
@@ -94,7 +131,6 @@ class TestNNConfig(unittest.TestCase):
             total_loss = loss1(torch_results[0], pi) + loss2(torch_results[1], z)
             total_loss.backward()
             optimizer.step()
-            scheduler.step()
 
             # train haida and compare parameters
             minibatch = [np_in, pi.detach().numpy(), np.ndarray.flatten(z.detach().numpy())]

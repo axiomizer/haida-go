@@ -13,7 +13,8 @@ class PolicyHead(AbstractNet):
         self.l1_filters = 2
 
         # convolutional layer; kernels indexed as [from][to]
-        self.kernels = [[np.random.randn(1) for _ in range(self.l1_filters)] for _ in range(in_filters)]
+        self.kernels = [[np.random.randn(1, 1) for _ in range(self.l1_filters)] for _ in range(in_filters)]
+        self.__dc_dk_runavg = [[np.zeros((1, 1)) for _ in range(self.l1_filters)] for _ in range(in_filters)]
 
         # batch norm
         self.bn = BatchNorm(self.l1_filters, self.cfg)
@@ -21,6 +22,8 @@ class PolicyHead(AbstractNet):
         # fully-connected linear layer: weights indexed as [to][from]
         self.weights = np.random.randn((board_size ** 2) + 1, (board_size ** 2) * self.l1_filters)
         self.biases = np.random.randn((board_size ** 2) + 1)
+        self.__dc_dw_runavg = np.zeros(((board_size ** 2) + 1, (board_size ** 2) * self.l1_filters))
+        self.__dc_db_runavg = np.zeros((board_size ** 2) + 1)
 
         self.__in_a = None  # input activations
         self.__a1 = None  # output activations of convolutional layer
@@ -73,11 +76,11 @@ class PolicyHead(AbstractNet):
         dc_dw = np.zeros((len(self.weights), len(self.weights[0])))
         for i in range(len(dc_da2)):
             dc_dw += np.outer(dc_da2[i], self.__a1[i])
-        self.update_theta(self.weights, dc_dw)
+        self.update_theta(self.weights, dc_dw, self.__dc_dw_runavg)
         dc_db = np.zeros(len(self.weights))
         for i in range(len(dc_da2)):
             dc_db += dc_da2[i]
-        self.update_theta(self.biases, dc_db)
+        self.update_theta(self.biases, dc_db, self.__dc_db_runavg)
 
     def __update_layer1_params(self, dc_dz1):
         for i in range(self.in_filters):
@@ -85,7 +88,7 @@ class PolicyHead(AbstractNet):
                 dc_dk = 0
                 for x in range(len(dc_dz1)):
                     dc_dk += np.sum(dc_dz1[x][j] * self.__in_a[x][i])
-                self.update_theta(self.kernels[i][j], dc_dk)
+                self.update_theta(self.kernels[i][j], dc_dk, self.__dc_dk_runavg[i][j])
 
     def checkpoint(self):
         pass

@@ -10,6 +10,7 @@ class ConvolutionalBlock(AbstractNet):
         super().__init__(config)
 
         self.kernels = [[np.random.randn(3, 3) for _ in range(out_filters)] for _ in range(in_filters)]
+        self.__dc_dk_runavg = [[np.zeros((3, 3)) for _ in range(out_filters)] for _ in range(in_filters)]
         self.bn = BatchNorm(out_filters, self.cfg)
 
         self.__in_a = None
@@ -35,10 +36,10 @@ class ConvolutionalBlock(AbstractNet):
     def __update_params(self, dc_dz):
         for i in range(len(self.kernels)):
             for j in range(len(self.kernels[0])):
-                dc_dw = np.zeros((3, 3))
+                dc_dk = np.zeros((3, 3))
                 for x in range(len(self.__in_a)):
-                    dc_dw += nnops_ext.correlate(self.__in_a[x][i], dc_dz[x][j], 1)
-                self.update_theta(self.kernels[i][j], dc_dw)
+                    dc_dk += nnops_ext.correlate(self.__in_a[x][i], dc_dz[x][j], 1)
+                self.update_theta(self.kernels[i][j], dc_dk, self.__dc_dk_runavg[i][j])
 
     def checkpoint(self):
         pass

@@ -23,6 +23,7 @@ LR_SCHED = [(0,      0.01),
             (400000, 0.001),
             (600000, 0.0001)]
 WEIGHT_DECAY = 0.0001  # l2 regularization parameter
+MOMENTUM = 0.9
 
 
 def pipeline():

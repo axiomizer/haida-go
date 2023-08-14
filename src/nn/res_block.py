@@ -8,10 +8,13 @@ from src.nn.shared import AbstractNet
 class ResidualBlock(AbstractNet):
     def __init__(self, filters, config=None):
         super().__init__(config)
+        self.filters = filters
 
         self.kernels1 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
+        self.__dc_dk1_runavg = [[np.zeros((3, 3)) for _ in range(filters)] for _ in range(filters)]
         self.bn1 = BatchNorm(filters, self.cfg)
         self.kernels2 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
+        self.__dc_dk2_runavg = [[np.zeros((3, 3)) for _ in range(filters)] for _ in range(filters)]
         self.bn2 = BatchNorm(filters, self.cfg)
 
         self.__in_a = None
@@ -43,17 +46,19 @@ class ResidualBlock(AbstractNet):
         dc_da_prev = []
         for i in range(len(self.__in_a)):
             dc_da_prev.append(op.correlate_all_kernels(dc_dz1[i], op.invert_kernels(self.kernels1)) + dc_dz2_hat[i])
-        self.__update_params(self.__a1, dc_dz2, self.kernels2)
-        self.__update_params(self.__in_a, dc_dz1, self.kernels1)
+        self.__update_params(dc_dz1, dc_dz2)
         return dc_da_prev
 
-    def __update_params(self, activations, dc_dz, kernels):
-        for i in range(len(kernels)):
-            for j in range(len(kernels[0])):
-                dc_dw = np.zeros((3, 3))
-                for x in range(len(activations)):
-                    dc_dw += nnops_ext.correlate(activations[x][i], dc_dz[x][j], 1)
-                self.update_theta(kernels[i][j], dc_dw)
+    def __update_params(self, dc_dz1, dc_dz2):
+        for i in range(self.filters):
+            for j in range(self.filters):
+                dc_dk2 = np.zeros((3, 3))
+                dc_dk1 = np.zeros((3, 3))
+                for x in range(len(self.__in_a)):
+                    dc_dk2 += nnops_ext.correlate(self.__a1[x][i], dc_dz2[x][j], 1)
+                    dc_dk1 += nnops_ext.correlate(self.__in_a[x][i], dc_dz1[x][j], 1)
+                self.update_theta(self.kernels2[i][j], dc_dk2, self.__dc_dk2_runavg[i][j])
+                self.update_theta(self.kernels1[i][j], dc_dk1, self.__dc_dk1_runavg[i][j])
 
     def checkpoint(self):
         pass

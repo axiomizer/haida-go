@@ -11,6 +11,9 @@ class BatchNorm(AbstractNet):
         # trainable parameters
         self.gamma = np.ones(filters)
         self.beta = np.zeros(filters)
+        # values for implementing momentum for sgd
+        self.__dc_dgamma_runavg = np.zeros(filters)
+        self.__dc_dbeta_runavg = np.zeros(filters)
 
         # values from last call to feedforward
         self.__x = None
@@ -70,8 +73,8 @@ class BatchNorm(AbstractNet):
                 path2 = dc_dvariance * (2 / self.__num_samples) * (self.__x[b][f] - self.__mean[f])
                 path3 = dc_dmean / self.__num_samples
                 dc_dx[b][f] = path1 + path2 + path3
-        self.update_theta(self.gamma, dc_dgamma)
-        self.update_theta(self.beta, dc_dbeta)
+        self.update_theta(self.gamma, dc_dgamma, self.__dc_dgamma_runavg)
+        self.update_theta(self.beta, dc_dbeta, self.__dc_dbeta_runavg)
         return dc_dx
 
     def checkpoint(self):
