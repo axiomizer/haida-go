@@ -1,10 +1,11 @@
 import numpy as np
 from math import sqrt
+from src.nn.shared import AbstractNet
 
 
-class BatchNorm:
-    def __init__(self, filters, config):
-        self.cfg = config
+class BatchNorm(AbstractNet):
+    def __init__(self, filters, config=None):
+        super().__init__(config)
         self.filters = filters
 
         # trainable parameters
@@ -38,6 +39,9 @@ class BatchNorm:
                 y[b][f] = self.__x_hat[b][f] * self.gamma[f] + self.beta[f]
         return y
 
+    def error(self, target):
+        raise NotImplementedError()
+
     def backprop(self, err):
         dc_dx_hat = [np.zeros(err[0].shape) for _ in range(len(err))]
         dc_dx = [np.zeros(err[0].shape) for _ in range(len(err))]
@@ -66,6 +70,9 @@ class BatchNorm:
                 path2 = dc_dvariance * (2 / self.__num_samples) * (self.__x[b][f] - self.__mean[f])
                 path3 = dc_dmean / self.__num_samples
                 dc_dx[b][f] = path1 + path2 + path3
-        self.cfg.theta_update_rule(self.gamma, dc_dgamma)
-        self.cfg.theta_update_rule(self.beta, dc_dbeta)
+        self.update_theta(self.gamma, dc_dgamma)
+        self.update_theta(self.beta, dc_dbeta)
         return dc_dx
+
+    def checkpoint(self):
+        pass

@@ -2,16 +2,17 @@ import numpy as np
 from src.nn.operations import op
 from src.nn.batch_norm import BatchNorm
 import nnops_ext
+from src.nn.shared import AbstractNet
 
 
-class ResidualBlock:
-    def __init__(self, filters, config):
-        self.cfg = config
+class ResidualBlock(AbstractNet):
+    def __init__(self, filters, config=None):
+        super().__init__(config)
 
         self.kernels1 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
-        self.bn1 = BatchNorm(filters, config)
+        self.bn1 = BatchNorm(filters, self.cfg)
         self.kernels2 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
-        self.bn2 = BatchNorm(filters, config)
+        self.bn2 = BatchNorm(filters, self.cfg)
 
         self.__in_a = None
         self.__a1 = None
@@ -27,6 +28,9 @@ class ResidualBlock:
         for i in range(len(in_activations)):
             self.__a2.append(op.rectify(z2_hat[i] + in_activations[i]))
         return self.__a2
+
+    def error(self, target):
+        raise NotImplementedError()
 
     def backprop(self, dc_da2):
         da2_dz2_hat = [self.__a2[i] > 0 for i in range(len(self.__a2))]
@@ -49,4 +53,7 @@ class ResidualBlock:
                 dc_dw = np.zeros((3, 3))
                 for x in range(len(activations)):
                     dc_dw += nnops_ext.correlate(activations[x][i], dc_dz[x][j], 1)
-                self.cfg.theta_update_rule(kernels[i][j], dc_dw)
+                self.update_theta(kernels[i][j], dc_dw)
+
+    def checkpoint(self):
+        pass

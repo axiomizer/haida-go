@@ -1,16 +1,17 @@
 import numpy as np
 from src.nn.operations import op
 from src.nn.batch_norm import BatchNorm
+from src.nn.shared import AbstractNet
 
 
-class ValueHead:
-    def __init__(self, in_filters, board_size, config):
-        self.cfg = config
+class ValueHead(AbstractNet):
+    def __init__(self, in_filters, board_size, config=None):
+        super().__init__(config)
         self.in_filters = in_filters
         self.board_size = board_size
 
         self.l1_kernels = np.random.randn(in_filters)
-        self.bn = BatchNorm(1, config)
+        self.bn = BatchNorm(1, self.cfg)
         self.l2_weights = np.random.randn(256, board_size ** 2)  # indexed as [to][from]
         self.l2_biases = np.random.randn(256)
         self.l3_weights = np.random.randn(256)
@@ -38,9 +39,11 @@ class ValueHead:
             self.__v.append(np.tanh(z))
         return self.__v
 
-    def backprop(self, target_values):
-        dc_dv = [-2 * (target_values[i] - self.__v[i]) / len(self.__in_a) for i in range(len(self.__in_a))]
-        dc_dz3 = [dc_dv[i] * (1 - self.__v[i] ** 2) for i in range(len(self.__in_a))]
+    def error(self, target):
+        return [-2 * (target[i] - self.__v[i]) / len(self.__in_a) for i in range(len(self.__in_a))]
+
+    def backprop(self, err):
+        dc_dz3 = [err[i] * (1 - self.__v[i] ** 2) for i in range(len(self.__in_a))]
         dc_da2 = [self.l3_weights * dc_dz3[i] for i in range(len(self.__in_a))]
         da2_dz2 = [self.__a2[i] > 0 for i in range(len(self.__a2))]
         dc_dz2 = [np.multiply(dc_da2[i], da2_dz2[i]) for i in range(len(self.__a2))]
@@ -64,19 +67,22 @@ class ValueHead:
         dc_dw = np.zeros(len(self.l3_weights))
         for i in range(len(dc_dz3)):
             dc_dw += dc_dz3[i] * self.__a2[i]
-        self.cfg.theta_update_rule(self.l3_weights, dc_dw)
-        self.cfg.theta_update_rule(self.l3_bias, sum(dc_dz3))
+        self.update_theta(self.l3_weights, dc_dw)
+        self.update_theta(self.l3_bias, sum(dc_dz3))
 
     def __update_layer2_params(self, dc_dz2):
         dc_dw = np.zeros((len(self.l2_weights), len(self.l2_weights[0])))
         for i in range(len(dc_dz2)):
             dc_dw += np.outer(dc_dz2[i], self.__a1[i])
-        self.cfg.theta_update_rule(self.l2_weights, dc_dw)
-        self.cfg.theta_update_rule(self.l2_biases, sum(dc_dz2))
+        self.update_theta(self.l2_weights, dc_dw)
+        self.update_theta(self.l2_biases, sum(dc_dz2))
 
     def __update_layer1_params(self, dc_dz1):
         dc_dk = np.zeros(self.in_filters)
         for f in range(self.in_filters):
             for x in range(len(dc_dz1)):
                 dc_dk[f] += np.sum(dc_dz1[x] * self.__in_a[x][f])
-        self.cfg.theta_update_rule(self.l1_kernels, dc_dk)
+        self.update_theta(self.l1_kernels, dc_dk)
+
+    def checkpoint(self):
+        pass

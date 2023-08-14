@@ -2,17 +2,17 @@ from src.nn.conv_block import ConvolutionalBlock
 from src.nn.res_block import ResidualBlock
 from src.nn.policy_head import PolicyHead
 from src.nn.value_head import ValueHead
-from src.nn.config import Config
+from src.nn.shared import AbstractNet
 
 
-class NeuralNet:
+class NeuralNet(AbstractNet):
     def __init__(self, board_size, residual_blocks, input_channels, filters, config=None):
-        self.cfg = config or Config()
+        super().__init__(config)
 
-        self.conv = ConvolutionalBlock(input_channels, filters, config)
-        self.res = [ResidualBlock(filters, config) for _ in range(residual_blocks)]
-        self.pol = PolicyHead(filters, board_size, config)
-        self.val = ValueHead(filters, board_size, config)
+        self.conv = ConvolutionalBlock(input_channels, filters, self.cfg)
+        self.res = [ResidualBlock(filters, self.cfg) for _ in range(residual_blocks)]
+        self.pol = PolicyHead(filters, board_size, self.cfg)
+        self.val = ValueHead(filters, board_size, self.cfg)
 
     def feedforward(self, in_activations):
         x = self.conv.feedforward(in_activations)
@@ -20,20 +20,19 @@ class NeuralNet:
             x = r.feedforward(x)
         return [self.pol.feedforward(x), self.val.feedforward(x)]
 
-    def backprop(self, pi, z):
-        ret = self.__backprop(pi, z)
-        self.cfg.step_lr_sched()
-        return ret
+    # target is the list [pi, z]
+    def error(self, target):
+        return [self.pol.error(target[0]), self.val.error(target[1])]
 
-    def __backprop(self, pi, z):
-        pol_err = self.pol.backprop(pi)
-        val_err = self.val.backprop(z)
-        if len(pol_err) != len(val_err):
+    def backprop(self, err):
+        if len(err[0]) != len(err[1]):
             raise ValueError("mismatched batch sizes?")
-        err = [pol_err[i] + val_err[i] for i in range(len(pol_err))]
+        pol_err = self.pol.backprop(err[0])
+        val_err = self.val.backprop(err[1])
+        err = [pe + ve for pe, ve in zip(pol_err, val_err)]
         for r in reversed(self.res):
             err = r.backprop(err)
         return self.conv.backprop(err)
 
-    def create_checkpoint(self):
-        return
+    def checkpoint(self):
+        pass

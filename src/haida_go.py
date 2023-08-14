@@ -21,9 +21,9 @@ WEIGHT_DECAY = 0.0001
 
 
 def pipeline():
-    cfg = Config(lr_sched=LR_SCHED, weight_decay=WEIGHT_DECAY)
-    nn = NeuralNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS, cfg)
-    checkpoints = [nn.create_checkpoint()]
+    nn = NeuralNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS)
+    nn.configure(lr_sched=LR_SCHED, weight_decay=WEIGHT_DECAY)
+    checkpoints = [nn.checkpoint()]
     best = 0  # index of best checkpoint
     examples = TrainingExamples()
 
@@ -31,11 +31,9 @@ def pipeline():
         for _ in range(STEPS_PER_EPOCH):
             new_training_examples = MCTS.self_play(checkpoints[best], EPISODES, SIMULATIONS)
             examples.put(new_training_examples)
-
             minibatch = examples.get_minibatch()
-            nn.feedforward(minibatch[0])
-            nn.backprop(minibatch[1], minibatch[2])
-        checkpoints.append(nn.create_checkpoint())
+            nn.train(minibatch)
+        checkpoints.append(nn.checkpoint())
         if evaluator.evaluate(checkpoints[best], checkpoints[-1]):
             best = len(checkpoints)-1
 

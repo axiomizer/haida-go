@@ -3,8 +3,6 @@ import random
 import numpy as np
 import torch
 import unittest
-from src.nn.operations import op
-from src.nn.config import Config
 from src.nn.neural_net import ResidualBlock, NeuralNet
 from test.unit.config import *
 
@@ -14,9 +12,9 @@ class TestNNConfig(unittest.TestCase):
         filters = 4
         learning_rates = [10 ** (5 * random.uniform(-1, 0)) for _ in range(10)]
         for lr in learning_rates:
-            cfg = Config(learning_rate=lr)
             torch_res = torchnet.TorchResBlock(filters)
-            haida_res = ResidualBlock(filters, cfg)
+            haida_res = ResidualBlock(filters)
+            haida_res.configure(learning_rate=lr)
             torch_res.copy_trainable_params(haida_res)
 
             # feedforward for both neural nets and compare results
@@ -45,9 +43,9 @@ class TestNNConfig(unittest.TestCase):
         # use values for weight_decay large enough to have a notable effect
         weight_decays = [10 ** (3 * random.uniform(-1, 0)) for _ in range(10)]
         for wd in weight_decays:
-            cfg = Config(learning_rate=learning_rate, weight_decay=wd)
             torch_res = torchnet.TorchResBlock(filters)
-            haida_res = ResidualBlock(filters, cfg)
+            haida_res = ResidualBlock(filters)
+            haida_res.configure(learning_rate=learning_rate, weight_decay=wd)
             torch_res.copy_trainable_params(haida_res)
 
             # feedforward for both neural nets and compare results
@@ -71,9 +69,11 @@ class TestNNConfig(unittest.TestCase):
             self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_lr_sched(self):
-        cfg = Config(lr_sched=[(0, 0.05), (5, 0.005), (10, 0.0005)])
-        torch_net = torchnet.TorchNet(3, INPUT_CHANNELS, FILTERS, BOARD_SIZE)
-        haida_net = NeuralNet(BOARD_SIZE, 3, INPUT_CHANNELS, FILTERS, cfg)
+        residual_blocks = 3
+        filters = 4
+        torch_net = torchnet.TorchNet(residual_blocks, INPUT_CHANNELS, filters, BOARD_SIZE)
+        haida_net = NeuralNet(BOARD_SIZE, residual_blocks, INPUT_CHANNELS, filters)
+        haida_net.configure(lr_sched=[(0, 0.05), (5, 0.005), (10, 0.0005)])
         torch_net.copy_trainable_params(haida_net)
 
         loss1 = torch.nn.CrossEntropyLoss()
@@ -81,15 +81,12 @@ class TestNNConfig(unittest.TestCase):
         optimizer = torch.optim.SGD(torch_net.parameters(), lr=0.05)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamma=0.1)
         for _ in range(15):
-            # feedforward for both neural nets and compare results
+            # feedforward
             np_in = np.random.randn(MINIBATCH_SIZE, INPUT_CHANNELS, BOARD_SIZE, BOARD_SIZE)
             torch_in = torch.tensor(np_in, dtype=torch.float64, requires_grad=True)
             torch_results = torch_net(torch_in)
-            haida_results = haida_net.feedforward(np_in)
-            self.assertTrue(np.allclose([op.softmax(a) for a in torch_results[0].detach().numpy()], haida_results[0]))
-            self.assertTrue(np.allclose(np.ndarray.flatten(torch_results[1].detach().numpy()), haida_results[1]))
 
-            # do one step of SGD for both nets and compare results
+            # do one step of SGD for torch net
             pi_raw = torch.randn(MINIBATCH_SIZE, (BOARD_SIZE ** 2) + 1, dtype=torch.float64)
             pi = torch.nn.functional.softmax(pi_raw, dim=1, dtype=torch.float64)
             z = torch.randn(MINIBATCH_SIZE, 1, dtype=torch.float64)
@@ -98,8 +95,8 @@ class TestNNConfig(unittest.TestCase):
             total_loss.backward()
             optimizer.step()
             scheduler.step()
-            haida_input_grads = haida_net.backprop(pi.detach().numpy(), np.ndarray.flatten(z.detach().numpy()))
-            self.assertTrue(torch_net.compare_params(haida_net))
 
-            # compare gradient with respect to input
-            self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
+            # train haida and compare parameters
+            minibatch = [np_in, pi.detach().numpy(), np.ndarray.flatten(z.detach().numpy())]
+            haida_net.train(minibatch)
+            self.assertTrue(torch_net.compare_params(haida_net))

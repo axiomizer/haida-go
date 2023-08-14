@@ -3,16 +3,15 @@ import numpy as np
 import torch
 import unittest
 from src.nn.operations import op
-from src.nn.config import Config
 from src.nn.neural_net import ConvolutionalBlock, ResidualBlock, PolicyHead, ValueHead, NeuralNet
 from test.unit.config import *
 
 
 class TestNN(unittest.TestCase):
     def test_conv(self):
-        cfg = Config(learning_rate=LEARNING_RATE)
         torch_conv = torchnet.TorchConvBlock(INPUT_CHANNELS, FILTERS)
-        haida_conv = ConvolutionalBlock(INPUT_CHANNELS, FILTERS, cfg)
+        haida_conv = ConvolutionalBlock(INPUT_CHANNELS, FILTERS)
+        haida_conv.configure(learning_rate=LEARNING_RATE)
         torch_conv.copy_trainable_params(haida_conv)
 
         # feedforward for both neural nets and compare results
@@ -36,9 +35,9 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_res(self):
-        cfg = Config(learning_rate=LEARNING_RATE)
         torch_res = torchnet.TorchResBlock(FILTERS)
-        haida_res = ResidualBlock(FILTERS, cfg)
+        haida_res = ResidualBlock(FILTERS)
+        haida_res.configure(learning_rate=LEARNING_RATE)
         torch_res.copy_trainable_params(haida_res)
 
         # feedforward for both neural nets and compare results
@@ -62,9 +61,9 @@ class TestNN(unittest.TestCase):
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_pol(self):
-        cfg = Config(learning_rate=LEARNING_RATE)
         torch_pol = torchnet.TorchPolHead(FILTERS, BOARD_SIZE)
-        haida_pol = PolicyHead(FILTERS, BOARD_SIZE, cfg)
+        haida_pol = PolicyHead(FILTERS, BOARD_SIZE)
+        haida_pol.configure(learning_rate=LEARNING_RATE)
         torch_pol.copy_trainable_params(haida_pol)
 
         # feedforward for both neural nets and compare results
@@ -82,16 +81,17 @@ class TestNN(unittest.TestCase):
         optimizer.zero_grad()
         loss(torch_results, target).backward()
         optimizer.step()
-        haida_input_grads = haida_pol.backprop(target.detach().numpy())
+        haida_err = haida_pol.error(target.detach().numpy())
+        haida_input_grads = haida_pol.backprop(haida_err)
         self.assertTrue(torch_pol.compare_params(haida_pol))
 
         # compare gradient with respect to input
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_val(self):
-        cfg = Config(learning_rate=LEARNING_RATE)
         torch_val = torchnet.TorchValHead(FILTERS, BOARD_SIZE)
-        haida_val = ValueHead(FILTERS, BOARD_SIZE, cfg)
+        haida_val = ValueHead(FILTERS, BOARD_SIZE)
+        haida_val.configure(learning_rate=LEARNING_RATE)
         torch_val.copy_trainable_params(haida_val)
 
         # feedforward for both neural nets and compare results
@@ -108,16 +108,17 @@ class TestNN(unittest.TestCase):
         optimizer.zero_grad()
         loss(torch_results, target).backward()
         optimizer.step()
-        haida_input_grads = haida_val.backprop(np.ndarray.flatten(target.detach().numpy()))
+        haida_err = haida_val.error(np.ndarray.flatten(target.detach().numpy()))
+        haida_input_grads = haida_val.backprop(haida_err)
         self.assertTrue(torch_val.compare_params(haida_val))
 
         # compare gradient with respect to input
         self.assertTrue(np.allclose(torch_in.grad, haida_input_grads))
 
     def test_full_net(self):
-        cfg = Config(learning_rate=LEARNING_RATE)
         torch_net = torchnet.TorchNet(RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS, BOARD_SIZE)
-        haida_net = NeuralNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS, cfg)
+        haida_net = NeuralNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS)
+        haida_net.configure(learning_rate=LEARNING_RATE)
         torch_net.copy_trainable_params(haida_net)
 
         # feedforward for both neural nets and compare results
@@ -139,7 +140,8 @@ class TestNN(unittest.TestCase):
         total_loss = loss1(torch_results[0], pi) + loss2(torch_results[1], z)
         total_loss.backward()
         optimizer.step()
-        haida_input_grads = haida_net.backprop(pi.detach().numpy(), np.ndarray.flatten(z.detach().numpy()))
+        haida_err = haida_net.error([pi.detach().numpy(), np.ndarray.flatten(z.detach().numpy())])
+        haida_input_grads = haida_net.backprop(haida_err)
         self.assertTrue(torch_net.compare_params(haida_net))
 
         # compare gradient with respect to input
