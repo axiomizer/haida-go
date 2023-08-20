@@ -1,8 +1,8 @@
 from math import isclose
 import numpy as np
-from src.nn.operations import op
-from src.nn.batch_norm import BatchNorm
-from src.nn.shared import AbstractNet
+from src.bot.nn.operations import op
+from src.bot.nn.batch_norm import BatchNorm
+from src.bot.nn.shared import AbstractNet
 
 
 class PolicyHead(AbstractNet):
@@ -89,6 +89,3 @@ class PolicyHead(AbstractNet):
                 for x in range(len(dc_dz1)):
                     dc_dk += np.sum(dc_dz1[x][j] * self.__in_a[x][i])
                 self.update_theta(self.kernels[i][j], dc_dk, self.__dc_dk_runavg[i][j])
-
-    def checkpoint(self):
-        pass

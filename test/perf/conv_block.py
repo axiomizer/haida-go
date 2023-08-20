@@ -3,11 +3,11 @@ import itertools
 import numpy as np
 import torch
 import time
-from test.perf.progress_bar import ProgressBar
+from util.progress_bar import ProgressBar
 from test.perf import pickler
 from test.perf.performance_unit import PerformanceUnit
 from test import torch_net
-from src.nn.haida_net import ConvolutionalBlock
+from src.bot.nn.haida_net import ConvolutionalBlock
 
 
 class ConvolutionalBlockFeedforwardUnit(PerformanceUnit):

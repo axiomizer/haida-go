@@ -1,5 +1,5 @@
 import scipy
-from test.perf.progress_bar import ProgressBar
+from util.progress_bar import ProgressBar
 import numpy as np
 import nnops_ext
 import time

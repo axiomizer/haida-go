@@ -1,8 +1,8 @@
 import numpy as np
-from src.nn.operations import op
-from src.nn.batch_norm import BatchNorm
+from src.bot.nn.operations import op
+from src.bot.nn.batch_norm import BatchNorm
 import nnops_ext
-from src.nn.shared import AbstractNet
+from src.bot.nn.shared import AbstractNet
 
 
 class ConvolutionalBlock(AbstractNet):
@@ -40,6 +40,3 @@ class ConvolutionalBlock(AbstractNet):
                 for x in range(len(self.__in_a)):
                     dc_dk += nnops_ext.correlate(self.__in_a[x][i], dc_dz[x][j], 1)
                 self.update_theta(self.kernels[i][j], dc_dk, self.__dc_dk_runavg[i][j])
-
-    def checkpoint(self):
-        pass

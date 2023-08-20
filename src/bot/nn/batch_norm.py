@@ -1,6 +1,6 @@
 import numpy as np
 from math import sqrt
-from src.nn.shared import AbstractNet
+from src.bot.nn.shared import AbstractNet
 
 
 class BatchNorm(AbstractNet):
@@ -76,6 +76,3 @@ class BatchNorm(AbstractNet):
         self.update_theta(self.gamma, dc_dgamma, self.__dc_dgamma_runavg)
         self.update_theta(self.beta, dc_dbeta, self.__dc_dbeta_runavg)
         return dc_dx
-
-    def checkpoint(self):
-        pass

@@ -1,7 +1,7 @@
 import numpy as np
-from src.nn.operations import op
-from src.nn.batch_norm import BatchNorm
-from src.nn.shared import AbstractNet
+from src.bot.nn.operations import op
+from src.bot.nn.batch_norm import BatchNorm
+from src.bot.nn.shared import AbstractNet
 
 
 class ValueHead(AbstractNet):
@@ -88,6 +88,3 @@ class ValueHead(AbstractNet):
             for x in range(len(dc_dz1)):
                 dc_dk[f] += np.sum(dc_dz1[x] * self.__in_a[x][f])
         self.update_theta(self.l1_kernels, dc_dk, self.__l1_dc_dk_runavg)
-
-    def checkpoint(self):
-        pass

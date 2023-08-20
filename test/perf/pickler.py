@@ -5,6 +5,8 @@ import pickle
 from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Dict, Any
+# TODO: does importing 'typing' have performance implications?
+# https://stackoverflow.com/questions/33533148/how-do-i-type-hint-a-method-with-the-type-of-the-enclosing-class
 
 DATA_PATH = os.path.join('test', 'perf', 'data')
 

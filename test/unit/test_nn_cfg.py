@@ -3,9 +3,9 @@ import random
 import numpy as np
 import torch
 import unittest
-from src.nn.haida_net import ResidualBlock, HaidaNet
+from src.bot.nn.haida_net import ResidualBlock, HaidaNet
 from test.unit.config import *
-from src.nn.operations import op
+from src.bot.nn.operations import op
 
 
 class TestNNConfig(unittest.TestCase):

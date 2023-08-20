@@ -1,8 +1,8 @@
-from src.nn.conv_block import ConvolutionalBlock
-from src.nn.res_block import ResidualBlock
-from src.nn.policy_head import PolicyHead
-from src.nn.value_head import ValueHead
-from src.nn.shared import AbstractNet
+from src.bot.nn.conv_block import ConvolutionalBlock
+from src.bot.nn.res_block import ResidualBlock
+from src.bot.nn.policy_head import PolicyHead
+from src.bot.nn.value_head import ValueHead
+from src.bot.nn.shared import AbstractNet
 
 
 class HaidaNet(AbstractNet):
@@ -33,6 +33,3 @@ class HaidaNet(AbstractNet):
         for r in reversed(self.res):
             err = r.backprop(err)
         return self.conv.backprop(err)
-
-    def checkpoint(self):
-        pass

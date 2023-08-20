@@ -1,2 +1,2 @@
 def evaluate(best_nn, newest_nn):
-    return
+    return True

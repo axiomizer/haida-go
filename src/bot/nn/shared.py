@@ -69,7 +69,3 @@ class AbstractNet(ABC):
     @abstractmethod
     def backprop(self, err):
         pass
-
-    @abstractmethod
-    def checkpoint(self):
-        pass
