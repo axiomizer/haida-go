@@ -8,12 +8,14 @@ import os
 import pickle
 import sys
 import copy
+from pathlib import Path
 
 
 TRAINED_NETS_PATH = os.path.join('src', 'bot', 'trained_nets')
 
 
 def pipeline(name):
+    Path(TRAINED_NETS_PATH).mkdir(exist_ok=True)
     filename = os.path.join(TRAINED_NETS_PATH, '{}.pickle'.format(name))
     if os.path.isfile(filename):
         raise ValueError('file already exists: {}'.format(filename))

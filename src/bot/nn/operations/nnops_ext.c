@@ -46,6 +46,8 @@ static PyObject *method_correlate(PyObject *self, PyObject *args) {
         }
     }
 
+    Py_DECREF(input1);
+    Py_DECREF(input2);
     return (PyObject *)output;
 }
 
