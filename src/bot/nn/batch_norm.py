@@ -22,21 +22,38 @@ class BatchNorm(AbstractNet):
         self.__variance = None
         self.__num_samples = 0
 
+        # running averages to be used when calling feedforward with a small batch size
+        self.__mean_runavg = np.zeros(filters)
+        self.__variance_runavg = np.ones(filters)
+
     def feedforward(self, x):
         batch_size = len(x)
         self.__x = x
         self.__num_samples = batch_size * np.prod(x[0][0].shape)
         self.__x_hat = [np.zeros(x[0].shape) for _ in range(batch_size)]
+
+        # get batch stats
+        if self.cfg.compute_batch_stats:
+            self.__mean = np.zeros(self.filters)
+            self.__variance = np.zeros(self.filters)
+            for f in range(self.filters):
+                for b in range(batch_size):
+                    self.__mean[f] += np.sum(x[b][f])
+                self.__mean[f] /= self.__num_samples
+                for b in range(batch_size):
+                    self.__variance[f] += np.sum((x[b][f] - self.__mean[f]) ** 2)
+                self.__variance[f] /= self.__num_samples
+            # update running averages
+            momentum = 0.1
+            self.__mean_runavg = (1 - momentum) * self.__mean_runavg + momentum * self.__mean
+            self.__variance_runavg = (1 - momentum) * self.__variance_runavg + momentum * self.__variance
+        else:
+            self.__mean = self.__mean_runavg
+            self.__variance = self.__variance_runavg
+
+        # normalize
         y = [np.zeros(x[0].shape) for _ in range(batch_size)]
-        self.__mean = np.zeros(self.filters)
-        self.__variance = np.zeros(self.filters)
         for f in range(self.filters):
-            for b in range(batch_size):
-                self.__mean[f] += np.sum(x[b][f])
-            self.__mean[f] /= self.__num_samples
-            for b in range(batch_size):
-                self.__variance[f] += np.sum((x[b][f] - self.__mean[f]) ** 2)
-            self.__variance[f] /= self.__num_samples
             for b in range(batch_size):
                 self.__x_hat[b][f] = (x[b][f] - self.__mean[f]) / sqrt(self.__variance[f] + self.cfg.batch_norm_epsilon)
                 y[b][f] = self.__x_hat[b][f] * self.gamma[f] + self.beta[f]
@@ -46,6 +63,8 @@ class BatchNorm(AbstractNet):
         raise NotImplementedError()
 
     def backprop(self, err):
+        if not self.cfg.compute_batch_stats:
+            raise NotImplementedError('backprop not implemented for the case when running averages were used')
         dc_dx_hat = [np.zeros(err[0].shape) for _ in range(len(err))]
         dc_dx = [np.zeros(err[0].shape) for _ in range(len(err))]
         dc_dgamma = np.zeros(self.filters)

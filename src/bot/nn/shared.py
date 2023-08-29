@@ -13,6 +13,11 @@ class Config:
         self.momentum = 0
         self.batch_norm_epsilon = 1e-05  # alphago zero doesn't specify; use value from pytorch as default
 
+        # affects how batch norm works
+        # if true, compute mean and variance from the batch provided, and update the running averages
+        # if false, use the running averages to perform batch normalization
+        self.compute_batch_stats = True
+
     def set_lr(self):
         temp = self.learning_rate
         for m, lr in self.lr_sched:
@@ -26,7 +31,13 @@ class AbstractNet(ABC):
         self.cfg = config or Config()  # one shared config instance
 
     # example of learning rate schedule: [(0, 0.01), (100, 0.001), (200, 0.0001)]
-    def configure(self, learning_rate=None, lr_sched=None, weight_decay=None, momentum=None, batch_norm_epsilon=None):
+    def configure(self,
+                  learning_rate=None,
+                  lr_sched=None,
+                  weight_decay=None,
+                  momentum=None,
+                  batch_norm_epsilon=None,
+                  compute_batch_stats=None):
         if learning_rate is not None:
             self.cfg.learning_rate = learning_rate
         if lr_sched is not None:
@@ -38,6 +49,8 @@ class AbstractNet(ABC):
             self.cfg.momentum = momentum
         if batch_norm_epsilon is not None:
             self.cfg.batch_norm_epsilon = batch_norm_epsilon
+        if compute_batch_stats is not None:
+            self.cfg.compute_batch_stats = compute_batch_stats
 
     def step_lr_sched(self):
         self.cfg.lr_step += 1
