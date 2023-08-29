@@ -10,10 +10,10 @@ class ResidualBlock(AbstractNet):
         super().__init__(config)
         self.filters = filters
 
-        self.kernels1 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
+        self.kernels1 = np.random.randn(filters, filters, 3, 3)
         self.__dc_dk1_runavg = [[np.zeros((3, 3)) for _ in range(filters)] for _ in range(filters)]
         self.bn1 = BatchNorm(filters, self.cfg)
-        self.kernels2 = [[np.random.randn(3, 3) for _ in range(filters)] for _ in range(filters)]
+        self.kernels2 = np.random.randn(filters, filters, 3, 3)
         self.__dc_dk2_runavg = [[np.zeros((3, 3)) for _ in range(filters)] for _ in range(filters)]
         self.bn2 = BatchNorm(filters, self.cfg)
 

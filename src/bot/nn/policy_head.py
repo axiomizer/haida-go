@@ -13,15 +13,16 @@ class PolicyHead(AbstractNet):
         self.l1_filters = 2
 
         # convolutional layer; kernels indexed as [from][to]
-        self.kernels = [[np.random.randn(1, 1) for _ in range(self.l1_filters)] for _ in range(in_filters)]
+        self.kernels = np.random.randn(in_filters, self.l1_filters, 1, 1)
         self.__dc_dk_runavg = [[np.zeros((1, 1)) for _ in range(self.l1_filters)] for _ in range(in_filters)]
 
         # batch norm
         self.bn = BatchNorm(self.l1_filters, self.cfg)
 
         # fully-connected linear layer: weights indexed as [to][from]
-        self.weights = np.random.randn((board_size ** 2) + 1, (board_size ** 2) * self.l1_filters)
-        self.biases = np.random.randn((board_size ** 2) + 1)
+        std = ((board_size ** 2) * self.l1_filters) ** -0.5
+        self.weights = np.random.normal(scale=std, size=((board_size ** 2) + 1, (board_size ** 2) * self.l1_filters))
+        self.biases = np.zeros(((board_size ** 2) + 1,))
         self.__dc_dw_runavg = np.zeros(((board_size ** 2) + 1, (board_size ** 2) * self.l1_filters))
         self.__dc_db_runavg = np.zeros((board_size ** 2) + 1)
 

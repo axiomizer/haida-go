@@ -129,7 +129,7 @@ class Agent:
         self.prior_positions.append(self.root.board)
 
         # update root
-        if self.temperature != 0:
+        if self.temperature != 1:
             pi = self.root.get_distribution(self.temperature)
         action = np.random.choice(range(self.board_size ** 2 + 1), p=pi)
         self.root = self.root.children[action]
@@ -143,8 +143,8 @@ class Agent:
         if self.root.check_game_over():
             z = self.root.final_reward()
             for ex in reversed(self.training_examples):
-                ex.z = z
                 z *= -1
+                ex.z = z
 
     def __is_repeated_position(self, board, node):
         curr = node

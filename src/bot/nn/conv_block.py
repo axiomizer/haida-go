@@ -9,7 +9,7 @@ class ConvolutionalBlock(AbstractNet):
     def __init__(self, in_filters, out_filters, config=None):
         super().__init__(config)
 
-        self.kernels = [[np.random.randn(3, 3) for _ in range(out_filters)] for _ in range(in_filters)]
+        self.kernels = np.random.randn(in_filters, out_filters, 3, 3)
         self.__dc_dk_runavg = [[np.zeros((3, 3)) for _ in range(out_filters)] for _ in range(in_filters)]
         self.bn = BatchNorm(out_filters, self.cfg)
 

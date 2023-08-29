@@ -13,13 +13,15 @@ class ValueHead(AbstractNet):
         self.l1_kernels = np.random.randn(in_filters)
         self.__l1_dc_dk_runavg = np.zeros(in_filters)
         self.bn = BatchNorm(1, self.cfg)
-        self.l2_weights = np.random.randn(256, board_size ** 2)  # indexed as [to][from]
+        std = (2.0 ** 0.5) / board_size
+        self.l2_weights = np.random.normal(scale=std, size=(256, board_size ** 2))  # indexed as [to][from]
         self.__l2_dc_dw_runavg = np.zeros((256, board_size ** 2))
-        self.l2_biases = np.random.randn(256)
+        self.l2_biases = np.zeros((256,))
         self.__l2_dc_db_runavg = np.zeros(256)
-        self.l3_weights = np.random.randn(256)
+        std = 0.0625
+        self.l3_weights = np.random.normal(scale=std, size=(256,))
         self.__l3_dc_dw_runavg = np.zeros(256)
-        self.l3_bias = np.random.randn(1)
+        self.l3_bias = np.zeros((1,))
         self.__l3_dc_db_runavg = np.zeros(1)
 
         self.__in_a = None
