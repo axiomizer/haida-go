@@ -46,7 +46,8 @@ class BatchNorm(AbstractNet):
             # update running averages
             momentum = 0.1
             self.__mean_runavg = (1 - momentum) * self.__mean_runavg + momentum * self.__mean
-            self.__variance_runavg = (1 - momentum) * self.__variance_runavg + momentum * self.__variance
+            unbiased = self.__variance * (self.__num_samples / (self.__num_samples - 1))  # Bessel's correction
+            self.__variance_runavg = (1 - momentum) * self.__variance_runavg + momentum * unbiased
         else:
             self.__mean = self.__mean_runavg
             self.__variance = self.__variance_runavg

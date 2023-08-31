@@ -179,3 +179,38 @@ class TestNNConfig(unittest.TestCase):
         haida_results = haida_net.feedforward(np_in)
         self.assertTrue(np.allclose([op.softmax(a) for a in torch_results[0].detach().numpy()], haida_results[0]))
         self.assertTrue(np.allclose(np.ndarray.flatten(torch_results[1].detach().numpy()), haida_results[1]))
+
+    def test_batch_stats(self):
+        torch_res = TorchResBlock(FILTERS)
+        haida_res = ResidualBlock(FILTERS)
+        haida_res.configure(learning_rate=LEARNING_RATE, compute_batch_stats=True)
+        torch_res.copy_trainable_params(haida_res)
+        torch_res.train()
+
+        # feedforward, computing batch stats
+        for _ in range(3):
+            np_in = np.random.randn(MINIBATCH_SIZE, FILTERS, BOARD_SIZE, BOARD_SIZE)
+            torch_in = torch.tensor(np_in, dtype=torch.float64)
+            torch_results = torch_res(torch_in)
+            haida_results = haida_res.feedforward(np_in)
+
+            self.assertTrue(np.allclose(torch_res.bn1.running_mean.detach().numpy(),
+                                        haida_res.bn1._BatchNorm__mean_runavg))
+            self.assertTrue(np.allclose(torch_res.bn1.running_var.detach().numpy(),
+                                        haida_res.bn1._BatchNorm__variance_runavg))
+            self.assertTrue(np.allclose(torch_res.bn2.running_mean.detach().numpy(),
+                                        haida_res.bn2._BatchNorm__mean_runavg))
+            self.assertTrue(np.allclose(torch_res.bn2.running_var.detach().numpy(),
+                                        haida_res.bn2._BatchNorm__variance_runavg))
+
+            self.assertTrue(np.allclose(torch_results.detach().numpy(), haida_results))
+
+        # feedforward, using stored batch stats
+        haida_res.configure(compute_batch_stats=False)
+        torch_res.eval()
+        for _ in range(3):
+            np_in = np.random.randn(MINIBATCH_SIZE, FILTERS, BOARD_SIZE, BOARD_SIZE)
+            torch_in = torch.tensor(np_in, dtype=torch.float64)
+            torch_results = torch_res(torch_in)
+            haida_results = haida_res.feedforward(np_in)
+            self.assertTrue(np.allclose(torch_results.detach().numpy(), haida_results))
