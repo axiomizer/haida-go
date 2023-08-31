@@ -56,20 +56,6 @@ class Node:
         self.W[action] += v
         self.Q[action] = self.W[action] / self.N[action]
 
-    def __str__(self):
-        if self.N is not None:
-            tp = 'W to play' if self.color_to_play is Color.WHITE else 'B to play'
-            n = 'N:{}'.format(self.N)
-            q = 'Q:[{}]'.format(' '.join(['{0:0.1f}'.format(q) for q in self.Q]))
-            length = len(q)
-            tp = tp + ' '*(length - len(tp))
-            n = n + ' '*(length - len(n))
-            b = self.board.__str__().split('\n')
-            b = [s + ' '*(length - len(s)) for s in b]
-            return '{}\n{}\n{}\n{}'.format(tp, n, q, '\n'.join(b))
-        else:
-            return self.board.__str__()
-
 
 class Agent:
     def __init__(self, nn: HaidaNet, num_simulations, board_size, history_planes):
@@ -88,30 +74,6 @@ class Agent:
         self.root = Node(None, 0, Board(board_size), Color.BLACK, 0)
         p, _ = self.__evaluate(self.root)
         self.root.expand(p)
-
-    def __str__(self):
-        def concat(str1, str2):
-            spl1 = str1.split('\n')
-            spl2 = str2.split('\n')
-            if len(spl1) > len(spl2):
-                spl2 += [' ' * len(spl2[0])] * (len(spl1) - len(spl2))
-            elif len(spl2) > len(spl1):
-                spl1 += [' ' * len(spl1[0])] * (len(spl2) - len(spl1))
-            return '\n'.join([a + ' ' + b for a, b in zip(spl1, spl2)])
-
-        def recurse(node):
-            ret = node.__str__()
-            if len(node.children) == 0:
-                return ret
-            spl = [recurse(c) for _, c in node.children.items()]
-            cat = spl[0]
-            for s in spl[1:]:
-                cat = concat(cat, s)
-            length = len(cat.split('\n')[0])
-            ret = '\n'.join([n + ' '*(length - len(n)) for n in ret.split('\n')])
-            return ret + '\n' + cat
-
-        return recurse(self.root)
 
     def game_concluded(self):
         return self.root.check_game_over()

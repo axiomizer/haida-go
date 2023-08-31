@@ -7,10 +7,8 @@ Usage:
 
 haida build
   Build the project
-haida bot train <name>
+haida train <name>
   Train a neural net and save it to a file with the given name
-haida bot exhibit <name>
-  Load a neural net from file with the given name, and have it play a game
 haida unit [test]
   Run unit test [test] or run all unit tests if no test supplied
 haida perf run [unit] [-i]
@@ -25,7 +23,7 @@ EOF
 
 case "$1" in
   build) (cd src\\bot\\nn\\operations; python setup.py install);;
-  bot)
+  train)
     python -m src.bot "${@:2}"
     if [ $? -eq 2 ]; then
       print_usage

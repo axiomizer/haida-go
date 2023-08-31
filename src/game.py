@@ -34,19 +34,6 @@ class Board:
     def __hash__(self):
         return hash(np.sign(self.board))
 
-    def __str__(self):
-        ret = ''
-        for i in range(self.size):
-            for j in range(self.size):
-                if self.board[i][j] > 0:
-                    ret += 'B'
-                elif self.board[i][j] < 0:
-                    ret += 'W'
-                else:
-                    ret += '-'
-            ret += '\n'
-        return ret
-
     def copy(self):
         c = Board(self.size)
         c.unique_group_id = self.unique_group_id
