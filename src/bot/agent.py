@@ -5,33 +5,32 @@ import numpy as np
 from src.bot.config import *
 
 
+class GameOverNode:
+    def __init__(self, parent_node, board: Board):
+        color_to_play = parent_node.color_to_play.opponent() if parent_node is not None else Color.BLACK
+        b_score, w_score = board.score(KOMI)
+        self.z = 1 if (b_score > w_score) == (color_to_play is Color.BLACK) else -1
+
+
 class Node:
-    def __init__(self, parent_node, depth, board: Board, color_to_play: Color, consecutive_passes):
+    def __init__(self, parent_node, board: Board, consecutive_passes, nn_in, p):
         self.parent = parent_node
-        self.depth = depth
+        self.depth = parent_node.depth + 1 if parent_node is not None else 0
         self.children = {}  # action -> node
-        self.num_actions = board.size ** 2 + 1
-        self.action_determined_illegal = np.zeros(self.num_actions, dtype=bool)
+        self.actions_determined_illegal = set()
 
         # game state
         self.board = board
-        self.color_to_play = color_to_play
+        self.nn_in = nn_in
+        self.color_to_play = parent_node.color_to_play.opponent() if parent_node is not None else Color.BLACK
         self.consecutive_passes = consecutive_passes
 
         # search stats
-        self.N = None
-        self.W = None
-        self.Q = None
-        self.P = None
-
-    def check_game_over(self):
-        return self.consecutive_passes == 2 or self.depth > 2 * (self.board.size ** 2)
-
-    def final_reward(self):
-        if not self.check_game_over():
-            raise ValueError('game is not over\n{}'.format(self))
-        b_score, w_score = self.board.score(KOMI)
-        return 1 if (b_score > w_score) == (self.color_to_play is Color.BLACK) else -1
+        num_actions = self.board.size ** 2 + 1
+        self.N = np.zeros(num_actions, dtype=int)
+        self.W = np.zeros(num_actions, dtype=float)
+        self.Q = np.zeros(num_actions, dtype=float)
+        self.P = p
 
     def get_criterion(self):
         return self.Q + C_PUCT * self.P * (sum(self.N) ** 0.5) / (1 + self.N)
@@ -43,18 +42,14 @@ class Node:
         exp = self.N ** (1 / temperature)
         return exp / sum(exp)
 
-    def expand(self, p):
-        if self.N is not None or self.W is not None or self.Q is not None or self.P is not None:
-            raise ValueError('node is already expanded:\n{}'.format(self))
-        self.N = np.zeros(self.num_actions, dtype=int)
-        self.W = np.zeros(self.num_actions, dtype=float)
-        self.Q = np.zeros(self.num_actions, dtype=float)
-        self.P = p
-
     def update(self, action, v):
         self.N[action] += 1
         self.W[action] += v
         self.Q[action] = self.W[action] / self.N[action]
+
+
+class GameOver(Exception):
+    pass
 
 
 class Agent:
@@ -64,27 +59,25 @@ class Agent:
         self.history_planes = history_planes
         self.board_size = board_size
 
-        # lists should be in chronological order
-        self.prior_positions = []  # instances of Board
-        self.training_examples = []
-
+        self.prior_positions = []  # instances of Board in chronological order
+        self.training_examples = []  # instances of TrainingExample in chronological order
         self.temperature = 1
 
         # initialize root
-        self.root = Node(None, 0, Board(board_size), Color.BLACK, 0)
-        p, _ = self.__evaluate(self.root)
-        self.root.expand(p)
-
-    def game_concluded(self):
-        return self.root.check_game_over()
+        board = Board(board_size)
+        nn_in = self.__compose_nn_input(None, board)
+        nn_out = self.nn.feedforward(np.expand_dims(nn_in, 0))
+        self.root = Node(None, board, 0, nn_in, nn_out[0][0])
 
     def move(self):
+        if type(self.root) is GameOverNode:
+            raise GameOver()
         for _ in range(self.num_simulations):
             self.__mcts(self.root)
 
         # add new training example
         pi = self.root.get_distribution(1)
-        new_example = TrainingExample(self.__compose_nn_input_planes(self.root), pi)
+        new_example = TrainingExample(self.root.nn_in, pi)
         self.training_examples.append(new_example)
 
         # add prior position
@@ -102,8 +95,8 @@ class Agent:
             self.temperature = 0
 
         # check game over
-        if self.root.check_game_over():
-            z = self.root.final_reward()
+        if type(self.root) is GameOverNode:
+            z = self.root.z
             for ex in reversed(self.training_examples):
                 z *= -1
                 ex.z = z
@@ -116,94 +109,66 @@ class Agent:
             curr = curr.parent
         return board in self.prior_positions
 
-    # returns new leaf, or returns None if action is illegal
+    # returns value of new leaf, or raises exception if action is illegal
     def __create_leaf(self, node, action):
         if action == self.board_size ** 2:  # if action is a pass
-            new_leaf = Node(node,
-                            node.depth + 1,
-                            node.board.copy(),
-                            node.color_to_play.opponent(),
-                            node.consecutive_passes + 1)
-            node.children[action] = new_leaf
-            return new_leaf
-        new_board = node.board.copy()
-        coordinates = (action // self.board_size, action % self.board_size)
-        try:
+            new_board = node.board.copy()
+            consecutive_passes = node.consecutive_passes + 1
+        else:
+            new_board = node.board.copy()
+            coordinates = (action // self.board_size, action % self.board_size)
             new_board.place_stone(coordinates, node.color_to_play)
-        except IllegalMove:
-            return None
-        if self.__is_repeated_position(new_board, node):
-            return None
-        new_leaf = Node(node, node.depth + 1, new_board, node.color_to_play.opponent(), 0)
+            if self.__is_repeated_position(new_board, node):
+                raise IllegalMove()
+            consecutive_passes = 0
+        if consecutive_passes == 2 or node.depth + 1 > 2 * (self.board_size ** 2):  # game over
+            new_leaf = GameOverNode(node, new_board)
+            v = new_leaf.z
+        else:
+            nn_in = self.__compose_nn_input(node, new_board)
+            nn_out = self.nn.feedforward(np.expand_dims(nn_in, 0))
+            new_leaf = Node(node, new_board, consecutive_passes, nn_in, nn_out[0][0])
+            v = nn_out[1][0]
         node.children[action] = new_leaf
-        return new_leaf
+        return v
 
-    # monte carlo tree search: recursive function returning value of node from node's perspective
+    # monte carlo tree search: recursive function returning value of node (from its own perspective)
     def __mcts(self, node):
-        if node.check_game_over():
-            return node.final_reward()
+        if type(node) is GameOverNode:
+            return node.z
         criterion = node.get_criterion()
         while True:
             # try picking best action
             best_action = None
             for a in range(len(criterion)):
-                if node.action_determined_illegal[a]:
+                if a in node.actions_determined_illegal:
                     continue
                 if best_action is None or criterion[a] > criterion[best_action]:
                     best_action = a
             if best_action is None:
                 raise ValueError('no legal moves found for node:\n{}'.format(node))
 
-            # recurse if possible
-            if best_action in node.children:
+            if best_action in node.children:  # recurse if possible
                 v = self.__mcts(node.children[best_action])
-                node.update(best_action, -1 * v)
-                return -1 * v
-
-            # create leaf, if legal move
-            new_leaf = self.__create_leaf(node, best_action)
-            if new_leaf is None:
-                node.action_determined_illegal[best_action] = True
-                continue
-            if new_leaf.check_game_over():
-                v = new_leaf.final_reward()
-            else:
-                p, v = self.__evaluate(new_leaf)
-                new_leaf.expand(p)
+            else:  # create leaf, if legal move
+                try:
+                    v = self.__create_leaf(node, best_action)
+                except IllegalMove:
+                    node.actions_determined_illegal.add(best_action)
+                    continue
             node.update(best_action, -1 * v)
             return -1 * v
 
-    def __compose_nn_input_planes(self, leaf):
-        nn_in = np.empty((self.history_planes * 2 + 3, self.board_size, self.board_size), dtype=bool)
-        curr = leaf
-        history_plane = 0
-        while curr is not None and history_plane <= self.history_planes:
-            nn_in[history_plane * 2] = curr.board.to_nn_plane(leaf.color_to_play)
-            nn_in[history_plane * 2 + 1] = curr.board.to_nn_plane(leaf.color_to_play.opponent())
-            history_plane += 1
-            curr = curr.parent
-        prior_position_idx = len(self.prior_positions) - 1
-        while prior_position_idx >= 0 and history_plane <= self.history_planes:
-            nn_in[history_plane * 2] =\
-                self.prior_positions[prior_position_idx].to_nn_plane(leaf.color_to_play)
-            nn_in[history_plane * 2 + 1] =\
-                self.prior_positions[prior_position_idx].to_nn_plane(leaf.color_to_play.opponent())
-            history_plane += 1
-            prior_position_idx -= 1
-        while history_plane <= self.history_planes:
-            nn_in[history_plane * 2] = np.zeros((self.board_size, self.board_size), dtype=bool)
-            nn_in[history_plane * 2 + 1] = np.zeros((self.board_size, self.board_size), dtype=bool)
-            history_plane += 1
-        nn_in[self.history_planes * 2 + 2] =\
-            np.full((self.board_size, self.board_size), leaf.color_to_play == Color.BLACK, dtype=bool)
+    def __compose_nn_input(self, parent, board):
+        color_to_play = parent.color_to_play.opponent() if parent is not None else Color.BLACK
+        hp = self.history_planes * 2
+        nn_in = np.empty((hp + 3, self.board_size, self.board_size), dtype=bool)
+        nn_in[0] = board.to_nn_plane(color_to_play)
+        nn_in[1] = board.to_nn_plane(color_to_play.opponent())
+        if parent is None:
+            nn_in[2:2+hp] = np.zeros((hp, self.board_size, self.board_size), dtype=bool)
+        else:
+            nn_in[2:2+hp:2] = parent.nn_in[1:hp:2]
+            nn_in[3:2+hp:2] = parent.nn_in[0:hp:2]
+        nn_in[hp+2] = np.full((self.board_size, self.board_size), color_to_play == Color.BLACK, dtype=bool)
         return nn_in
-
-    def __evaluate(self, leaf):
-        nn_in = np.expand_dims(self.__compose_nn_input_planes(leaf), 0)
-        nn_out = self.nn.feedforward(nn_in)
-        p = nn_out[0][0]
-        v = nn_out[1][0]
-        if p.shape != (self.board_size ** 2 + 1,) or type(v) is not np.float64:
-            raise ValueError('neural network output has unexpected type:\np.shape = {}\ntype(v)={}'
-                             .format(p.shape, type(v)))
-        return p, v

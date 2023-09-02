@@ -1,4 +1,4 @@
-from src.bot.agent import Agent
+from src.bot.agent import Agent, GameOver
 from src.bot.nn.haida_net import HaidaNet
 from src.bot import evaluator
 from src.bot.training_examples import TrainingExamples
@@ -18,8 +18,11 @@ def self_play(nn):
     new_training_examples = []
     for _ in range(EPISODES):
         agent = Agent(nn, SIMULATIONS, BOARD_SIZE, HISTORY_PLANES)
-        while not agent.game_concluded():
-            agent.move()
+        while True:
+            try:
+                agent.move()
+            except GameOver:
+                break
         new_training_examples += agent.training_examples
     return new_training_examples
 
