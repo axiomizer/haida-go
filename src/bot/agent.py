@@ -9,6 +9,7 @@ class GameOverNode:
     def __init__(self, parent_node, board: Board):
         color_to_play = parent_node.color_to_play.opponent() if parent_node is not None else Color.BLACK
         b_score, w_score = board.score(KOMI)
+        self.winner = Color.BLACK if b_score > w_score else Color.WHITE
         self.z = 1 if (b_score > w_score) == (color_to_play is Color.BLACK) else -1
 
 
@@ -53,13 +54,13 @@ class GameOver(Exception):
 
 
 class Agent:
-    def __init__(self, nn: HaidaNet, num_simulations, board_size, history_planes):
+    def __init__(self, nn: HaidaNet, board_size, history_planes, generate_training_exaples):
         self.nn = nn
-        self.num_simulations = num_simulations
         self.history_planes = history_planes
         self.board_size = board_size
 
         self.prior_positions = []  # instances of Board in chronological order
+        self.generate_training_examples = generate_training_exaples
         self.training_examples = []  # instances of TrainingExample in chronological order
         self.temperature = 1
 
@@ -69,23 +70,39 @@ class Agent:
         nn_out = self.nn.feedforward(np.expand_dims(nn_in, 0))
         self.root = Node(None, board, 0, nn_in, nn_out[0][0])
 
-    def move(self):
+    def inform_move(self, action):
         if type(self.root) is GameOverNode:
             raise GameOver()
-        for _ in range(self.num_simulations):
+
+        self.prior_positions.append(self.root.board)
+
+        # update root
+        if action not in self.root.children:
+            self.__create_leaf(self.root, action)
+        self.root = self.root.children[action]
+        self.root.parent = None
+
+        # update temperature
+        if len(self.prior_positions) == TEMP_THRESHHOLD:
+            self.temperature = 0
+
+    def move(self, num_simulations):
+        if type(self.root) is GameOverNode:
+            raise GameOver()
+        for _ in range(num_simulations):
             self.__mcts(self.root)
 
         # add new training example
-        pi = self.root.get_distribution(1)
-        new_example = TrainingExample(self.root.nn_in, pi)
-        self.training_examples.append(new_example)
+        if self.generate_training_examples:
+            pi = self.root.get_distribution(1)
+            new_example = TrainingExample(self.root.nn_in, pi)
+            self.training_examples.append(new_example)
 
         # add prior position
         self.prior_positions.append(self.root.board)
 
         # update root
-        if self.temperature != 1:
-            pi = self.root.get_distribution(self.temperature)
+        pi = self.root.get_distribution(self.temperature)
         action = np.random.choice(range(self.board_size ** 2 + 1), p=pi)
         self.root = self.root.children[action]
         self.root.parent = None
@@ -95,11 +112,13 @@ class Agent:
             self.temperature = 0
 
         # check game over
-        if type(self.root) is GameOverNode:
+        if type(self.root) is GameOverNode and self.generate_training_examples:
             z = self.root.z
             for ex in reversed(self.training_examples):
                 z *= -1
                 ex.z = z
+
+        return action
 
     def __is_repeated_position(self, board, node):
         curr = node
