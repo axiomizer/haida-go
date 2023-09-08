@@ -7,8 +7,9 @@ Usage:
 
 haida build
   Build the project
-haida bot train <name>
+haida bot train <name> [--supervised]
   Train a neural net and save it to a file with the given name
+  --supervised: train the net from game records (otherwise train by self-play)
 haida bot rank
   Pit bots agains each and calculate their elo ratings
 haida unit [test]
