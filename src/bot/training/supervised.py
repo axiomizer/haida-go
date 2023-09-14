@@ -2,14 +2,14 @@ import os
 import tarfile
 import numpy as np
 from src.game import Color, Board
-from src.bot.training_examples import TrainingExample, Pool
+from src.bot.training.training_examples import TrainingExample, Pool
 from src.bot import nn_input
 from src.bot.config import *
 from src.bot.nn.haida_net import HaidaNet
-from util.progress_bar import ProgressBar
+from src.progress_bar import ProgressBar
 
 
-KGS_GAMES_PATH = os.path.join('src', 'bot', 'kgs')
+KGS_GAMES_PATH = os.path.join('src', 'bot', 'training', 'kgs')
 
 
 # https://www.red-bean.com/sgf/index.html

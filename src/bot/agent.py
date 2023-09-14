@@ -1,6 +1,6 @@
 from src.game import Board, Color, IllegalMove
 from src.bot.nn.haida_net import HaidaNet
-from src.bot.training_examples import TrainingExample
+from src.bot.training.training_examples import TrainingExample
 from src.bot import nn_input
 import numpy as np
 from src.bot.config import *

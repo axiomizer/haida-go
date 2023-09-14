@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import torch
 import time
-from util.progress_bar import ProgressBar
+from src.progress_bar import ProgressBar
 from test.perf import pickler
 from test.perf.performance_unit import PerformanceUnit
 from test import torch_net

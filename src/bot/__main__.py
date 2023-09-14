@@ -1,4 +1,5 @@
-from src.bot import supervised, pipeline, evaluation
+from src.bot import evaluation
+from src.bot.training import pipeline, supervised
 import os
 import pickle
 import sys

@@ -1,7 +1,7 @@
 from src.bot.agent import Agent, GameOver
 from src.bot.config import *
 from src.game import Color
-from util.progress_bar import ProgressBar
+from src.progress_bar import ProgressBar
 import os
 import pickle
 import itertools

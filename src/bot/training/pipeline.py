@@ -1,9 +1,9 @@
 from src.bot.agent import Agent, GameOver
 from src.bot.nn.haida_net import HaidaNet
-from src.bot.training_examples import EvolvingPool
+from src.bot.training.training_examples import EvolvingPool
 from src.bot.config import *
 from src.bot.evaluation import pit
-from util.progress_bar import ProgressBar
+from src.progress_bar import ProgressBar
 import copy
 
 
