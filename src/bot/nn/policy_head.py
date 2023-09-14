@@ -47,6 +47,10 @@ class PolicyHead(AbstractNet):
         self.__p = [op.softmax(a) for a in self.__a2]
         return self.__p
 
+    def loss(self, target):
+        losses = [-1 * np.dot(target[i], np.log(self.__p[i])) for i in range(len(target))]
+        return sum(losses) / len(target)
+
     # calculate the error with respect to the logit probabilities
     def error(self, target):
         # the formula for dc_da2 is only valid if the target policy sums to 1

@@ -46,6 +46,10 @@ class ValueHead(AbstractNet):
             self.__v.append(np.tanh(z))
         return self.__v
 
+    def loss(self, target):
+        losses = [(self.__v[i] - target[i]) ** 2 for i in range(len(target))]
+        return sum(losses) / len(target)
+
     def error(self, target):
         return [-2 * (target[i] - self.__v[i]) / len(self.__in_a) for i in range(len(self.__in_a))]
 

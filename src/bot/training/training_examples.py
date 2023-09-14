@@ -30,15 +30,14 @@ class Pool:
     def num_batches(self):
         return (len(self.examples) - self.ind) // self.batch_size
 
-    def minibatches(self, num_batches):
-        if num_batches > self.num_batches():
+    def get_minibatch(self):
+        if self.num_batches() < 1:
             raise ValueError('Not enough examples left')
-        for _ in range(num_batches):
-            examples = self.examples[self.ind:self.ind+self.batch_size]
-            self.ind += self.batch_size
-            yield [np.ascontiguousarray([ex.nn_input for ex in examples]),
-                   np.ascontiguousarray([ex.pi for ex in examples]),
-                   np.ascontiguousarray([ex.z for ex in examples])]
+        examples = self.examples[self.ind:self.ind+self.batch_size]
+        self.ind += self.batch_size
+        return [np.ascontiguousarray([ex.nn_input for ex in examples]),
+                np.ascontiguousarray([ex.pi for ex in examples]),
+                np.ascontiguousarray([ex.z for ex in examples])]
 
 
 class EvolvingPool:

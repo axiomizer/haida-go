@@ -20,6 +20,9 @@ class HaidaNet(AbstractNet):
             x = r.feedforward(x)
         return [self.pol.feedforward(x), self.val.feedforward(x)]
 
+    def loss(self, target):
+        return self.pol.loss(target[0]) + self.val.loss(target[1])
+
     # target is the list [pi, z]
     def error(self, target):
         return [self.pol.error(target[0]), self.val.error(target[1])]

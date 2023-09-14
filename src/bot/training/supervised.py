@@ -147,14 +147,22 @@ def train():
     nn = HaidaNet(BOARD_SIZE, RESIDUAL_BLOCKS, INPUT_CHANNELS, FILTERS)
     nn.configure(lr_sched=LR_SCHED, weight_decay=WEIGHT_DECAY, momentum=MOMENTUM, compute_batch_stats=True)
     training_examples = parse_kgs_examples(30)
-    if training_examples.num_batches() < TRAINING_STEPS:
+    if training_examples.num_batches() < (TRAINING_STEPS + 1) * EPOCHS:
         raise ValueError('Not enough training examples')
 
-    print('Training neural net...')
-    progress_bar = ProgressBar(TRAINING_STEPS)
-    progress_bar.start()
-    for minibatch in training_examples.minibatches(TRAINING_STEPS):
-        nn.train(minibatch)
-        progress_bar.increment()
-    progress_bar.end()
+    for i in range(EPOCHS):
+        print('Training epoch {}/{}...'.format(i + 1, EPOCHS))
+        progress_bar = ProgressBar(TRAINING_STEPS)
+        progress_bar.start()
+        for _ in range(TRAINING_STEPS):
+            minibatch = training_examples.get_minibatch()
+            nn.train(minibatch)
+            progress_bar.increment()
+        progress_bar.end()
+
+        # get loss
+        minibatch = training_examples.get_minibatch()
+        nn.feedforward(minibatch[0])
+        loss = nn.loss(minibatch[1:])
+        print('Loss: {}'.format(loss))
     return nn
