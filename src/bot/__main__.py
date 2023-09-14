@@ -35,3 +35,4 @@ if sys.argv[1] == 'train':
     train(sys.argv[2], sup_flag)
 elif sys.argv[1] == 'rank':
     evaluation.rank_bots(TRAINED_NETS_PATH)
+sys.exit(2)

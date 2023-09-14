@@ -71,6 +71,9 @@ class Agent:
         nn_out = self.nn.feedforward(np.expand_dims(nn_in, 0))
         self.root = Node(None, board, 0, nn_in, nn_out[0][0])
 
+    def game_over(self):
+        return type(self.root) is GameOverNode
+
     def inform_move(self, action):
         if type(self.root) is GameOverNode:
             raise GameOver()
