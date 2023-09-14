@@ -1,5 +1,5 @@
 EPOCHS = 10
-STEPS_PER_EPOCH = 1000
+TRAINING_STEPS = 50
 
 # self-play settings
 EPISODES = 250  # 25000
@@ -11,10 +11,10 @@ KOMI = 7.5
 
 # neural net architecture
 BOARD_SIZE = 19
-RESIDUAL_BLOCKS = 19
-HISTORY_PLANES = 7
-INPUT_CHANNELS = 2 * HISTORY_PLANES + 3
-FILTERS = 256
+RESIDUAL_BLOCKS = 9  # 19
+HISTORY_PLANES = 6  # 14
+INPUT_CHANNELS = HISTORY_PLANES + 3
+FILTERS = 16  # 256
 
 # other neural net hyperparameters
 MINIBATCH_SIZE = 32  # 32 on each of 64 workers; 2048 total

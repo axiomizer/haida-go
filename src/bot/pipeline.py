@@ -1,6 +1,6 @@
 from src.bot.agent import Agent, GameOver
 from src.bot.nn.haida_net import HaidaNet
-from src.bot.training_examples import TrainingExamples
+from src.bot.training_examples import EvolvingPool
 from src.bot.config import *
 from src.bot.evaluation import pit
 from util.progress_bar import ProgressBar
@@ -30,14 +30,14 @@ def train():
     checkpoints = [copy.deepcopy(nn)]
     checkpoints[0].configure(compute_batch_stats=False)
     best = 0  # index of best checkpoint
-    examples = TrainingExamples()
-    progress_bar = ProgressBar(EPOCHS * STEPS_PER_EPOCH)
+    example_pool = EvolvingPool(STEPS_SAVED, MINIBATCH_SIZE)
+    progress_bar = ProgressBar(EPOCHS * TRAINING_STEPS)
     progress_bar.start()
     for _ in range(EPOCHS):
-        for _ in range(STEPS_PER_EPOCH):
+        for _ in range(TRAINING_STEPS):
             new_training_examples = self_play(checkpoints[best])
-            examples.put(new_training_examples)
-            minibatch = examples.get_minibatch()
+            example_pool.put(new_training_examples)
+            minibatch = example_pool.get_minibatch()
             nn.train(minibatch)
             progress_bar.increment()
         checkpoints.append(copy.deepcopy(nn))

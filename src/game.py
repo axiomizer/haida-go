@@ -77,12 +77,6 @@ class Board:
             if self.board[i, j] in groups:
                 self.board[i, j] = new_val
 
-    def to_nn_plane(self, color: Color):
-        if color is Color.BLACK:
-            return self.board > 0
-        else:
-            return self.board < 0
-
     def place_stone(self, position: tuple[int, int], color: Color):
         if position[0] < 0 or position[0] >= self.size or position[1] < 0 or position[1] >= self.size:
             raise IllegalMove('position {} out of bounds'.format(position))

@@ -9,7 +9,6 @@ TRAINED_NETS_PATH = os.path.join('src', 'bot', 'trained_nets')
 
 
 def train(name, sup):
-    Path(TRAINED_NETS_PATH).mkdir(exist_ok=True)
     filename = os.path.join(TRAINED_NETS_PATH, '{}.pickle'.format(name))
     if os.path.isfile(filename):
         raise ValueError('file already exists: {}'.format(filename))
@@ -25,6 +24,7 @@ def train(name, sup):
     print('Trained net saved to: {}'.format(filename))
 
 
+Path(TRAINED_NETS_PATH).mkdir(exist_ok=True)
 if len(sys.argv) <= 1:
     sys.exit(2)
 if sys.argv[1] == 'train':

@@ -1,6 +1,7 @@
 from src.game import Board, Color, IllegalMove
 from src.bot.nn.haida_net import HaidaNet
 from src.bot.training_examples import TrainingExample
+from src.bot import nn_input
 import numpy as np
 from src.bot.config import *
 
@@ -54,19 +55,19 @@ class GameOver(Exception):
 
 
 class Agent:
-    def __init__(self, nn: HaidaNet, board_size, history_planes, generate_training_exaples):
+    def __init__(self, nn: HaidaNet, board_size, history_planes, generate_training_examples):
         self.nn = nn
         self.history_planes = history_planes
         self.board_size = board_size
 
         self.prior_positions = []  # instances of Board in chronological order
-        self.generate_training_examples = generate_training_exaples
+        self.generate_training_examples = generate_training_examples
         self.training_examples = []  # instances of TrainingExample in chronological order
         self.temperature = 1
 
         # initialize root
         board = Board(board_size)
-        nn_in = self.__compose_nn_input(None, board)
+        nn_in = nn_input.compose(None, board, history_planes)
         nn_out = self.nn.feedforward(np.expand_dims(nn_in, 0))
         self.root = Node(None, board, 0, nn_in, nn_out[0][0])
 
@@ -95,7 +96,7 @@ class Agent:
         # add new training example
         if self.generate_training_examples:
             pi = self.root.get_distribution(1)
-            new_example = TrainingExample(self.root.nn_in, pi)
+            new_example = TrainingExample(self.root.nn_in, pi, None)
             self.training_examples.append(new_example)
 
         # add prior position
@@ -144,7 +145,7 @@ class Agent:
             new_leaf = GameOverNode(node, new_board)
             v = new_leaf.z
         else:
-            nn_in = self.__compose_nn_input(node, new_board)
+            nn_in = nn_input.compose(node.nn_in, new_board, self.history_planes)
             nn_out = self.nn.feedforward(np.expand_dims(nn_in, 0))
             new_leaf = Node(node, new_board, consecutive_passes, nn_in, nn_out[0][0])
             v = nn_out[1][0]
@@ -177,17 +178,3 @@ class Agent:
                     continue
             node.update(best_action, -1 * v)
             return -1 * v
-
-    def __compose_nn_input(self, parent, board):
-        color_to_play = parent.color_to_play.opponent() if parent is not None else Color.BLACK
-        hp = self.history_planes * 2
-        nn_in = np.empty((hp + 3, self.board_size, self.board_size), dtype=bool)
-        nn_in[0] = board.to_nn_plane(color_to_play)
-        nn_in[1] = board.to_nn_plane(color_to_play.opponent())
-        if parent is None:
-            nn_in[2:2+hp] = np.zeros((hp, self.board_size, self.board_size), dtype=bool)
-        else:
-            nn_in[2:2+hp:2] = parent.nn_in[1:hp:2]
-            nn_in[3:2+hp:2] = parent.nn_in[0:hp:2]
-        nn_in[hp+2] = np.full((self.board_size, self.board_size), color_to_play == Color.BLACK, dtype=bool)
-        return nn_in
