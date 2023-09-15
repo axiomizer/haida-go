@@ -67,7 +67,7 @@ def examples_from_kgs_data(examples_per_game):
                 total_games += 1
                 f = tf.extractfile(member)
                 string = f.read().decode('UTF-8')
-                sgf = SGF(string)
+                sgf = SGF.from_string(string)
                 if (not validate_sgf(sgf)) or len(sgf.moves) < examples_per_game:
                     skipped_games += 1
                     continue

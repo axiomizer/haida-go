@@ -2,9 +2,13 @@ from src.bot.agent import Agent, GameOver
 from src.bot.config import *
 from src.game import Color
 from src.progress_bar import ProgressBar
+from src.sgf import SGF
 import os
 import pickle
 import itertools
+
+
+EVALUATION_GAMES_PATH = os.path.join('src', 'bot', 'evaluation_games')
 
 
 # return True if nn1 wins, False if nn2 wins
@@ -51,3 +55,22 @@ def rank_bots(path):
     # print ratings
     for k, v in sorted(elo.items(), key=lambda item: item[1]):
         print('{}:\t{}'.format(k, int(v)))
+
+
+def exhibit(nn):
+    agent = Agent(nn, BOARD_SIZE, HISTORY_PLANES, False)
+    moves = []
+    print('Playing match', end='', flush=True)
+    while not agent.game_over():
+        action = agent.move(SIMULATIONS)
+        if action == BOARD_SIZE ** 2:
+            moves.append(None)
+        else:
+            moves.append((action // BOARD_SIZE, action % BOARD_SIZE))
+        print('.', end='', flush=True)
+    print('', flush=True)
+    sgf = SGF.build(BOARD_SIZE, KOMI, agent.root.winner, moves)
+    filename = os.path.join(EVALUATION_GAMES_PATH, '{}.sgf'.format('match'))
+    with open(filename, 'w') as f:
+        f.write(sgf.to_string())
+    print('SGF file saved to: {}'.format(filename), flush=True)

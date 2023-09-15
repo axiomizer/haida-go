@@ -4,6 +4,7 @@ src/bot/nn/operations/build
 src/bot/nn/operations/dist
 src/bot/nn/operations/nnops_ext.egg-info
 src/bot/trained_nets
+src/bot/evaluation_games
 __pycache__
 venv
 *.DS_Store

@@ -1,5 +1,7 @@
 from src.game import Color
 from enum import Enum
+from typing import List, Tuple
+from itertools import cycle
 
 
 # https://www.red-bean.com/sgf/index.html
@@ -39,78 +41,165 @@ class GameResult:
         TIME = 2
         FORFEIT = 3
 
-    def __init__(self, string):
+    def __init__(self, winner, by, margin):
+        self.winner = winner
+        self.by = by
+        self.margin = margin
+
+    def to_string(self):
+        if self.winner is GameResult.Winner.DRAW:
+            return 'Draw'
+        if self.winner is GameResult.Winner.NO_RESULT:
+            return 'Void'
+        if self.winner is GameResult.Winner.UNKNOWN:
+            return '?'
+        ret = 'B+' if self.winner is GameResult.Winner.BLACK else 'W+'
+        if self.by is None:
+            return ret
+        if self.by is GameResult.By.SCORE:
+            return ret + str(self.margin)
+        if self.by is GameResult.By.RESIGN:
+            return ret + 'R'
+        if self.by is GameResult.By.TIME:
+            return ret + 'T'
+        if self.by is GameResult.By.FORFEIT:
+            return ret + 'F'
+        return None
+
+    @staticmethod
+    def from_string(string):
         if string == '0' or string == 'Draw':
-            self.winner = GameResult.Winner.DRAW
+            winner = GameResult.Winner.DRAW
         elif string[:2] == 'B+':
-            self.winner = GameResult.Winner.BLACK
+            winner = GameResult.Winner.BLACK
         elif string[:2] == 'W+':
-            self.winner = GameResult.Winner.WHITE
+            winner = GameResult.Winner.WHITE
         elif string == 'Void':
-            self.winner = GameResult.Winner.NO_RESULT
+            winner = GameResult.Winner.NO_RESULT
         elif string == '?':
-            self.winner = GameResult.Winner.UNKNOWN
+            winner = GameResult.Winner.UNKNOWN
         else:
             raise SgfSyntaxError('Failed to parse game result: {}'.format(string))
-        self.by = None
-        self.margin = None
-        if self.winner is GameResult.Winner.BLACK or self.winner is GameResult.Winner.WHITE and len(string) > 2:
+        by = None
+        margin = None
+        if winner is GameResult.Winner.BLACK or winner is GameResult.Winner.WHITE and len(string) > 2:
             s = string[2:]
             if s == 'R' or s == 'Resign':
-                self.by = GameResult.By.RESIGN
+                by = GameResult.By.RESIGN
             elif s == 'T' or s == 'Time':
-                self.by = GameResult.By.TIME
+                by = GameResult.By.TIME
             elif s == 'F' or s == 'Forfeit':
-                self.by = GameResult.By.FORFEIT
+                by = GameResult.By.FORFEIT
             else:
-                self.by = GameResult.By.SCORE
+                by = GameResult.By.SCORE
                 try:
-                    self.margin = float(s)
+                    margin = float(s)
                 except ValueError:
                     raise SgfSyntaxError('Unexpected string in game result: {}'.format(s))
+        return GameResult(winner, by, margin)
 
 
 class RootNode:
-    def __init__(self, string):
+    def __init__(self,
+                 board_size: int,
+                 ruleset: str,
+                 komi: float,
+                 handicap: int,
+                 handicap_points,
+                 result: GameResult):
+        self.board_size = board_size
+        self.ruleset = ruleset
+        self.komi = komi
+        self.handicap = handicap
+        self.handicap_points = handicap_points
+        self.result = result
+
+    def to_string(self):
+        ret = ';'
+        ret += 'GM[1]'
+        ret += 'SZ[{}]'.format(self.board_size)
+        ret += 'RU[{}]'.format(self.ruleset) if self.ruleset is not None else ''
+        ret += 'KM[{}]'.format(self.komi)
+        if self.handicap > 0:
+            ret += 'HA[{}]'.format(self.handicap)
+            pts = ['[' + chr(h[1] + ord('a')) + chr(h[0] + ord('a')) + ']' for h in self.handicap_points]
+            ret += 'AB{}'.format(''.join(pts))
+        ret += 'RE[{}]'.format(self.result.to_string())
+        return ret
+
+    @staticmethod
+    def from_string(string):
         properties = parse_node_properties(string)
         if 'GM' not in properties or properties['GM'] != ['1']:
             raise TypeError('Tried to parse an sgf file for a game other than Go')
-        self.board_size = int(properties['SZ'][0]) if 'SZ' in properties else 19
-        self.ruleset = properties['RU'][0] if 'RU' in properties else None
-        self.komi = float(properties['KM'][0])  # assume this property will be present
-        self.handicap = int(properties['HA'][0]) if 'HA' in properties else 0
-        self.handicap_points = [(ord(p[1]) - ord('a'), ord(p[0]) - ord('a')) for p in properties['AB']]\
-            if self.handicap > 0 else []
-        self.result = GameResult(properties['RE'][0])
+        board_size = int(properties['SZ'][0]) if 'SZ' in properties else 19
+        ruleset = properties['RU'][0] if 'RU' in properties else None
+        komi = float(properties['KM'][0])  # assume this property will be present
+        handicap = int(properties['HA'][0]) if 'HA' in properties else 0
+        handicap_pts = [(ord(p[1]) - ord('a'), ord(p[0]) - ord('a')) for p in properties['AB']] if handicap > 0 else []
+        result = GameResult.from_string(properties['RE'][0])
+        return RootNode(board_size, ruleset, komi, handicap, handicap_pts, result)
 
 
 class MoveNode:
-    def __init__(self, string):
+    def __init__(self, player: Color, move):
+        self.player = player
+        self.move = move  # tuple of int, or None (signifying pass)
+
+    def to_string(self):
+        p = 'B' if self.player is Color.BLACK else 'W'
+        m = '' if self.move is None else chr(self.move[1] + ord('a')) + chr(self.move[0] + ord('a'))
+        return ';{}[{}]'.format(p, m)
+
+    @staticmethod
+    def from_string(string):
         properties = parse_node_properties(string)
         if 'B' in properties and 'W' not in properties:
-            self.player = Color.BLACK
+            player = Color.BLACK
             move = properties['B'][0]
         elif 'W' in properties and 'B' not in properties:
-            self.player = Color.WHITE
+            player = Color.WHITE
             move = properties['W'][0]
         else:
             raise SgfSyntaxError('Expected either a black move or a white move: {}'.format(string))
         if move == '':
-            self.move = None  # move is a pass
+            position = None  # move is a pass
         elif len(move) != 2 or not all(map(lambda c: ord('a') <= ord(c) <= ord('z'), move)):
             raise SgfSyntaxError('Failed to parse move: {}'.format(move))
         else:
-            self.move = (ord(move[1]) - ord('a'), ord(move[0]) - ord('a'))
+            position = (ord(move[1]) - ord('a'), ord(move[0]) - ord('a'))
+        return MoveNode(player, position)
 
 
 class SGF:
-    def __init__(self, string):
-        sequence = self.__main_branch(string)
-        nodes = sequence.split(';')[1:]
-        self.root = RootNode(nodes[0])
-        self.moves = [MoveNode(n) for n in nodes[1:]]
+    def __init__(self, root: RootNode, moves: List[MoveNode]):
+        self.root = root
+        self.moves = moves
 
-    def __main_branch(self, data):
+    def to_string(self):
+        move_nodes = [m.to_string() for m in self.moves]
+        return '({}{})'.format(self.root.to_string(), ''.join(move_nodes))
+
+    @staticmethod
+    def build(size: int, komi: float, winner: Color, moves: List[Tuple[int, int]]):
+        if winner is Color.BLACK:
+            result = GameResult(GameResult.Winner.BLACK, None, None)
+        elif winner is Color.WHITE:
+            result = GameResult(GameResult.Winner.WHITE, None, None)
+        else:
+            result = GameResult(GameResult.Winner.UNKNOWN, None, None)
+        root_node = RootNode(size, 'Chinese', komi, 0, [], result)
+        move_nodes = [MoveNode(c, a) for c, a in zip(cycle([Color.BLACK, Color.WHITE]), moves)]
+        return SGF(root_node, move_nodes)
+
+    @staticmethod
+    def from_string(string):
+        sequence = SGF.__main_branch(string)
+        nodes = sequence.split(';')[1:]
+        return SGF(RootNode.from_string(nodes[0]), [MoveNode.from_string(n) for n in nodes[1:]])
+
+    @staticmethod
+    def __main_branch(data):
         depth = 0
         start = data.find('(')
         if start == -1:
@@ -121,5 +210,5 @@ class SGF:
             elif data[i] == ')':
                 depth -= 1
             if depth == 0:
-                return data[:start] + self.__main_branch(data[start+1:i])
+                return data[:start] + SGF.__main_branch(data[start+1:i])
         raise ValueError('Unbalanced parentheses')

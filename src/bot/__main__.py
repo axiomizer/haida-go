@@ -9,6 +9,13 @@ from pathlib import Path
 TRAINED_NETS_PATH = os.path.join('src', 'bot', 'trained_nets')
 
 
+def load_bot(name):
+    filename = os.path.join(TRAINED_NETS_PATH, '{}.pickle'.format(name))
+    with open(filename, 'rb') as f:
+        nn = pickle.load(f)
+    return nn
+
+
 def train(name, sup):
     filename = os.path.join(TRAINED_NETS_PATH, '{}.pickle'.format(name))
     if os.path.isfile(filename):
@@ -35,4 +42,9 @@ if sys.argv[1] == 'train':
     train(sys.argv[2], sup_flag)
 elif sys.argv[1] == 'rank':
     evaluation.rank_bots(TRAINED_NETS_PATH)
-sys.exit(2)
+elif sys.argv[1] == 'exhibit':
+    if len(sys.argv) <= 2:
+        sys.exit(2)
+    evaluation.exhibit(load_bot(sys.argv[2]))
+else:
+    sys.exit(2)
