@@ -1,7 +1,7 @@
 import numpy as np
-from src.bot.nn.operations import op
+from src.bot.nn.ext import op
 from src.bot.nn.batch_norm import BatchNorm
-import nnops_ext
+import nn_ext
 from src.bot.nn.shared import AbstractNet
 
 
@@ -55,7 +55,7 @@ class ResidualBlock(AbstractNet):
                 dc_dk2 = np.zeros((3, 3))
                 dc_dk1 = np.zeros((3, 3))
                 for x in range(len(self.__in_a)):
-                    dc_dk2 += nnops_ext.correlate(self.__a1[x][i], dc_dz2[x][j], 1)
-                    dc_dk1 += nnops_ext.correlate(self.__in_a[x][i], dc_dz1[x][j], 1)
+                    dc_dk2 += nn_ext.correlate(self.__a1[x][i], dc_dz2[x][j], 1)
+                    dc_dk1 += nn_ext.correlate(self.__in_a[x][i], dc_dz1[x][j], 1)
                 self.update_theta(self.kernels2[i][j], dc_dk2, self.__dc_dk2_runavg[i][j])
                 self.update_theta(self.kernels1[i][j], dc_dk1, self.__dc_dk1_runavg[i][j])

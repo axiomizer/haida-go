@@ -1,8 +1,8 @@
 .idea
 test/perf/data
-src/bot/nn/operations/build
-src/bot/nn/operations/dist
-src/bot/nn/operations/nnops_ext.egg-info
+src/bot/nn/ext/build
+src/bot/nn/ext/dist
+src/bot/nn/ext/nn_ext.egg-info
 src/bot/trained_nets
 src/bot/evaluation_games
 __pycache__

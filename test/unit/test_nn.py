@@ -2,7 +2,7 @@ from test.torch_net import TorchConvBlock, TorchResBlock, TorchPolHead, TorchVal
 import numpy as np
 import torch
 import unittest
-from src.bot.nn.operations import op
+from src.bot.nn.ext import op
 from src.bot.nn.haida_net import ConvolutionalBlock, ResidualBlock, PolicyHead, ValueHead, HaidaNet
 from test.unit.config import *
 

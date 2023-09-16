@@ -5,7 +5,7 @@ import torch
 import unittest
 from src.bot.nn.haida_net import ResidualBlock, HaidaNet
 from test.unit.config import *
-from src.bot.nn.operations import op
+from src.bot.nn.ext import op
 
 
 class TestNNConfig(unittest.TestCase):

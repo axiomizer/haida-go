@@ -1,5 +1,5 @@
 import numpy as np
-from src.bot.nn.operations import op
+from src.bot.nn.ext import op
 from src.bot.nn.batch_norm import BatchNorm
 from src.bot.nn.shared import AbstractNet
 

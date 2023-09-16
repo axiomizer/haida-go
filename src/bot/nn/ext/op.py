@@ -1,5 +1,5 @@
 import numpy as np
-import nnops_ext
+import nn_ext
 
 
 def correlate_all_kernels(in_array, kernels):
@@ -8,7 +8,7 @@ def correlate_all_kernels(in_array, kernels):
     out_array = np.zeros((out_filters, in_shape[1], in_shape[2]))
     for f in range(out_filters):
         for in_f in range(in_shape[0]):
-            out_array[f] += nnops_ext.correlate(in_array[in_f], kernels[in_f][f], 1)
+            out_array[f] += nn_ext.correlate(in_array[in_f], kernels[in_f][f], 1)
     return out_array
 
 

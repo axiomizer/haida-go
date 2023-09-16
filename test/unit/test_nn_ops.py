@@ -1,6 +1,6 @@
 import numpy as np
 import unittest
-import nnops_ext
+import nn_ext
 
 
 def loss_derivative(a, pi):
@@ -20,7 +20,7 @@ class TestNNOperations(unittest.TestCase):
                                     [-1, 3, 0, 0],
                                     [10, 12, 10, 0],
                                     [0, 0, -2, -1]])
-        self.assertTrue(np.array_equal(nnops_ext.correlate(arr1, arr2, 1), expected_result))
+        self.assertTrue(np.array_equal(nn_ext.correlate(arr1, arr2, 1), expected_result))
 
     def test_correlate_odd(self):
         arr1 = np.array([[1, 2, 3, 4, 5],
@@ -36,7 +36,7 @@ class TestNNOperations(unittest.TestCase):
                                     [10, 19, 12, 13, -4],
                                     [-17, -6, 15, 17, 8],
                                     [0, -6, -5, 6, 8]])
-        self.assertTrue(np.array_equal(nnops_ext.correlate(arr1, arr2, 1), expected_result))
+        self.assertTrue(np.array_equal(nn_ext.correlate(arr1, arr2, 1), expected_result))
 
     def test_correlate_rectangle(self):
         arr1 = np.array([[3, 1, 0, 2, 0, 1, 1],
@@ -54,7 +54,7 @@ class TestNNOperations(unittest.TestCase):
         expected_result = np.array([[17, 4, 11],
                                     [-18, 16, 6],
                                     [2, 24, -28]])
-        self.assertTrue(np.array_equal(nnops_ext.correlate(arr1, arr2, 1), expected_result))
+        self.assertTrue(np.array_equal(nn_ext.correlate(arr1, arr2, 1), expected_result))
 
     def test_correlate_overhang(self):
         arr1 = np.array([[0, 1, 3],
@@ -68,4 +68,4 @@ class TestNNOperations(unittest.TestCase):
                                     [5, -7, -3, 2, -1],
                                     [-1, 2, 3, 8, -1],
                                     [-6, 6, -5, 9, 6]])
-        self.assertTrue(np.array_equal(nnops_ext.correlate(arr1, arr2, 2), expected_result))
+        self.assertTrue(np.array_equal(nn_ext.correlate(arr1, arr2, 2), expected_result))

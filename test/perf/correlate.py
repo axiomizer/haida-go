@@ -1,7 +1,7 @@
 import scipy
 from src.progress_bar import ProgressBar
 import numpy as np
-import nnops_ext
+import nn_ext
 import time
 from test.perf import pickler
 import matplotlib.pyplot as plt
@@ -29,7 +29,7 @@ class CrossCorrelationUnit(PerformanceUnit):
             m2 = np.random.randn(3, 3)
 
             t = time.time()
-            haida_result = nnops_ext.correlate(m1, m2, 1)
+            haida_result = nn_ext.correlate(m1, m2, 1)
             t = time.time() - t
             haida_times.append(t)
 

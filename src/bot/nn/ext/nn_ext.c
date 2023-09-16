@@ -58,13 +58,13 @@ static PyMethodDef methods[] = {
 
 static struct PyModuleDef module_def = {
     PyModuleDef_HEAD_INIT,
-    "nnops_ext",
+    "nn_ext",
     "Fast matrix operations for a neural network",
     -1,
     methods
 };
 
-PyMODINIT_FUNC PyInit_nnops_ext(void) {
+PyMODINIT_FUNC PyInit_nn_ext(void) {
     import_array();
     return PyModule_Create(&module_def);
 }
