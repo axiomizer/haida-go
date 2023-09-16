@@ -1,10 +1,11 @@
 import sys
 from test.perf.correlate import CrossCorrelationUnit
 from test.perf.conv_block import ConvolutionalBlockFeedforwardUnit
+from test.perf.full_net import FullNetUnit
 from test.perf import pickler
 
 
-performance_units = [CrossCorrelationUnit, ConvolutionalBlockFeedforwardUnit]
+performance_units = [CrossCorrelationUnit, ConvolutionalBlockFeedforwardUnit, FullNetUnit]
 
 
 def describe_perf_units():
