@@ -137,7 +137,7 @@ class RootNode:
         komi = float(properties['KM'][0])  # assume this property will be present
         handicap = int(properties['HA'][0]) if 'HA' in properties else 0
         handicap_pts = [(ord(p[1]) - ord('a'), ord(p[0]) - ord('a')) for p in properties['AB']] if handicap > 0 else []
-        result = GameResult.from_string(properties['RE'][0])
+        result = GameResult.from_string(properties['RE'][0]) if 'RE' in properties else None
         return RootNode(board_size, ruleset, komi, handicap, handicap_pts, result)
 
 

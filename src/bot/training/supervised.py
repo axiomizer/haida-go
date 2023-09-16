@@ -17,6 +17,8 @@ def validate_sgf(sgf: SGF):
     r = sgf.root
     if r.board_size != BOARD_SIZE or r.ruleset != 'Chinese' or r.komi != KOMI or r.handicap != 0:
         return False
+    if r.result is None:
+        return False
     if r.result.winner is not GameResult.Winner.BLACK and r.result.winner is not GameResult.Winner.WHITE:
         return False
     color_to_play = Color.BLACK
