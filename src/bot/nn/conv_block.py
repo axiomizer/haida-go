@@ -18,7 +18,7 @@ class ConvolutionalBlock(AbstractNet):
 
     def feedforward(self, in_activations):
         self.__in_a = in_activations
-        z = [op.correlate_all_kernels(in_a, self.kernels) for in_a in in_activations]
+        z = nn_ext.correlate_all(in_activations, self.kernels)
         self.__a = [op.rectify(z_hat) for z_hat in self.bn.feedforward(z)]
         return self.__a
 
@@ -29,7 +29,7 @@ class ConvolutionalBlock(AbstractNet):
         da_dz_hat = [self.__a[i] > 0 for i in range(len(self.__a))]
         dc_dz_hat = [np.multiply(dc_da[i], da_dz_hat[i]) for i in range(len(self.__a))]
         dc_dz = self.bn.backprop(dc_dz_hat)
-        dc_da_prev = [op.correlate_all_kernels(x, op.invert_kernels(self.kernels)) for x in dc_dz]
+        dc_da_prev = nn_ext.correlate_all(dc_dz, op.invert_kernels(self.kernels))
         self.__update_params(dc_dz)
         return dc_da_prev
 

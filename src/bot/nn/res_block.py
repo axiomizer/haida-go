@@ -23,9 +23,9 @@ class ResidualBlock(AbstractNet):
 
     def feedforward(self, in_activations):
         self.__in_a = in_activations
-        z1 = [op.correlate_all_kernels(in_a, self.kernels1) for in_a in in_activations]
+        z1 = nn_ext.correlate_all(in_activations, self.kernels1)
         self.__a1 = [op.rectify(z1_hat) for z1_hat in self.bn1.feedforward(z1)]
-        z2 = [op.correlate_all_kernels(a1, self.kernels2) for a1 in self.__a1]
+        z2 = nn_ext.correlate_all(self.__a1, self.kernels2)
         z2_hat = self.bn2.feedforward(z2)
         self.__a2 = []
         for i in range(len(in_activations)):
@@ -39,13 +39,11 @@ class ResidualBlock(AbstractNet):
         da2_dz2_hat = [self.__a2[i] > 0 for i in range(len(self.__a2))]
         dc_dz2_hat = [np.multiply(dc_da2[i], da2_dz2_hat[i]) for i in range(len(self.__a2))]
         dc_dz2 = self.bn2.backprop(dc_dz2_hat)
-        dc_da1 = [op.correlate_all_kernels(x, op.invert_kernels(self.kernels2)) for x in dc_dz2]
+        dc_da1 = nn_ext.correlate_all(dc_dz2, op.invert_kernels(self.kernels2))
         da1_dz1_hat = [self.__a1[i] > 0 for i in range(len(self.__a1))]
         dc_dz1_hat = [np.multiply(dc_da1[i], da1_dz1_hat[i]) for i in range(len(self.__a1))]
         dc_dz1 = self.bn1.backprop(dc_dz1_hat)
-        dc_da_prev = []
-        for i in range(len(self.__in_a)):
-            dc_da_prev.append(op.correlate_all_kernels(dc_dz1[i], op.invert_kernels(self.kernels1)) + dc_dz2_hat[i])
+        dc_da_prev = nn_ext.correlate_all(dc_dz1, op.invert_kernels(self.kernels1)) + dc_dz2_hat
         self.__update_params(dc_dz1, dc_dz2)
         return dc_da_prev
 
