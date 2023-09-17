@@ -29,7 +29,7 @@ class CrossCorrelationUnit(PerformanceUnit):
             m2 = np.random.randn(3, 3)
 
             t = time.time()
-            haida_result = nn_ext.correlate(m1, m2, 1)
+            haida_result = nn_ext.correlate(m1, m2, 1, False)
             t = time.time() - t
             haida_times.append(t)
 
