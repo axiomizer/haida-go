@@ -1,10 +1,8 @@
 from test.torch_net import TorchConvBlock, TorchResBlock, TorchPolHead, TorchValHead, TorchNet
-import numpy as np
 import torch
 import unittest
-from src.bot.nn.ext import op
 from src.bot.nn.haida_net import ConvolutionalBlock, ResidualBlock, PolicyHead, ValueHead, HaidaNet
-from test.unit.config import *
+from test.unit.util import *
 
 
 class TestNN(unittest.TestCase):
@@ -71,7 +69,7 @@ class TestNN(unittest.TestCase):
         torch_in = torch.tensor(np_in, dtype=torch.float64, requires_grad=True)
         torch_results = torch_pol(torch_in)
         haida_results = haida_pol.feedforward(np_in)
-        self.assertTrue(np.allclose([op.softmax(a) for a in torch_results.detach().numpy()], haida_results))
+        self.assertTrue(np.allclose([softmax(a) for a in torch_results.detach().numpy()], haida_results))
 
         # do one step of SGD for both nets and compare results
         raw_target = torch.randn(MINIBATCH_SIZE, (BOARD_SIZE ** 2) + 1, dtype=torch.float64)
@@ -126,7 +124,7 @@ class TestNN(unittest.TestCase):
         torch_in = torch.tensor(np_in, dtype=torch.float64, requires_grad=True)
         torch_results = torch_net(torch_in)
         haida_results = haida_net.feedforward(np_in)
-        self.assertTrue(np.allclose([op.softmax(a) for a in torch_results[0].detach().numpy()], haida_results[0]))
+        self.assertTrue(np.allclose([softmax(a) for a in torch_results[0].detach().numpy()], haida_results[0]))
         self.assertTrue(np.allclose(np.ndarray.flatten(torch_results[1].detach().numpy()), haida_results[1]))
 
         # do one step of SGD for both nets and compare results

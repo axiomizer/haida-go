@@ -1,5 +1,4 @@
 import numpy as np
-from src.bot.nn.ext import op
 from src.bot.nn.batch_norm import BatchNorm
 from src.bot.nn.shared import AbstractNet
 
@@ -35,11 +34,11 @@ class ValueHead(AbstractNet):
         for in_a in in_activations:
             conv = sum([in_a[i] * self.l1_kernels[i] for i in range(self.in_filters)])
             z.append(np.expand_dims(conv, 0))
-        self.__a1 = [op.rectify(np.squeeze(z_hat)) for z_hat in self.bn.feedforward(z)]
+        self.__a1 = [np.maximum(np.squeeze(z_hat), 0) for z_hat in self.bn.feedforward(z)]
         self.__a2 = []
         for i in range(len(in_activations)):
             z = np.matmul(self.l2_weights, self.__a1[i].flatten()) + self.l2_biases
-            self.__a2.append(op.rectify(z))
+            self.__a2.append(np.maximum(z, 0))
         self.__v = []
         for i in range(len(in_activations)):
             z = np.dot(self.l3_weights, self.__a2[i]) + self.l3_bias[0]

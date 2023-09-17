@@ -1,11 +1,9 @@
 from test.torch_net import TorchResBlock, TorchNet
 import random
-import numpy as np
 import torch
 import unittest
 from src.bot.nn.haida_net import ResidualBlock, HaidaNet
-from test.unit.config import *
-from src.bot.nn.ext import op
+from test.unit.util import *
 
 
 class TestNNConfig(unittest.TestCase):
@@ -177,7 +175,7 @@ class TestNNConfig(unittest.TestCase):
         torch_in = torch.tensor(np_in, dtype=torch.float64, requires_grad=True)
         torch_results = torch_net(torch_in)
         haida_results = haida_net.feedforward(np_in)
-        self.assertTrue(np.allclose([op.softmax(a) for a in torch_results[0].detach().numpy()], haida_results[0]))
+        self.assertTrue(np.allclose([softmax(a) for a in torch_results[0].detach().numpy()], haida_results[0]))
         self.assertTrue(np.allclose(np.ndarray.flatten(torch_results[1].detach().numpy()), haida_results[1]))
 
     def test_batch_stats(self):

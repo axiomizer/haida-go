@@ -1,6 +1,5 @@
 from math import isclose
 import numpy as np
-from src.bot.nn.ext import op
 from src.bot.nn.batch_norm import BatchNorm
 from src.bot.nn.shared import AbstractNet
 
@@ -31,6 +30,11 @@ class PolicyHead(AbstractNet):
         self.__a2 = None  # output activations of fully-connected linear layer (logit probabilities)
         self.__p = None  # output after softmax
 
+    @staticmethod
+    def __softmax(a):
+        e_to_a = np.exp(a - np.max(a))
+        return e_to_a / e_to_a.sum()
+
     def feedforward(self, in_activations):
         self.__in_a = in_activations
         z = []
@@ -40,11 +44,11 @@ class PolicyHead(AbstractNet):
             for f in range(self.l1_filters):
                 conv[f] = sum([in_a[i] * self.kernels[i][f] for i in range(self.in_filters)])
             z.append(conv)
-        self.__a1 = [op.rectify(z_hat) for z_hat in self.bn.feedforward(z)]
+        self.__a1 = [np.maximum(z_hat, 0) for z_hat in self.bn.feedforward(z)]
         self.__a2 = []
         for i in range(len(in_activations)):
             self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases)
-        self.__p = [op.softmax(a) for a in self.__a2]
+        self.__p = [self.__softmax(a) for a in self.__a2]
         return self.__p
 
     def loss(self, target):
