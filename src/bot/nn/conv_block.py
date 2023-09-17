@@ -18,15 +18,14 @@ class ConvolutionalBlock(AbstractNet):
     def feedforward(self, in_activations):
         self.__in_a = in_activations
         z = nn_ext.correlate_all(in_activations, self.kernels, False)
-        self.__a = [np.maximum(z_hat, 0) for z_hat in self.bn.feedforward(z)]
+        self.__a = np.maximum(self.bn.feedforward(z), 0)
         return self.__a
 
     def error(self, target):
         raise NotImplementedError()
 
     def backprop(self, dc_da):
-        da_dz_hat = [self.__a[i] > 0 for i in range(len(self.__a))]
-        dc_dz_hat = [np.multiply(dc_da[i], da_dz_hat[i]) for i in range(len(self.__a))]
+        dc_dz_hat = np.multiply(dc_da, self.__a > 0)
         dc_dz = self.bn.backprop(dc_dz_hat)
         dc_da_prev = nn_ext.correlate_all(dc_dz, self.kernels, True)
         self.__update_params(dc_dz)

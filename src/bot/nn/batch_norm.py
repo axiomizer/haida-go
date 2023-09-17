@@ -53,7 +53,7 @@ class BatchNorm(AbstractNet):
             self.__variance = self.__variance_runavg
 
         # normalize
-        y = [np.zeros(x[0].shape) for _ in range(batch_size)]
+        y = np.zeros((batch_size,) + x[0].shape)
         for f in range(self.filters):
             for b in range(batch_size):
                 self.__x_hat[b][f] = (x[b][f] - self.__mean[f]) / sqrt(self.__variance[f] + self.cfg.batch_norm_epsilon)
@@ -66,8 +66,8 @@ class BatchNorm(AbstractNet):
     def backprop(self, err):
         if not self.cfg.compute_batch_stats:
             raise NotImplementedError('backprop not implemented for the case when running averages were used')
-        dc_dx_hat = [np.zeros(err[0].shape) for _ in range(len(err))]
-        dc_dx = [np.zeros(err[0].shape) for _ in range(len(err))]
+        dc_dx_hat = np.zeros((len(err),) + err[0].shape)
+        dc_dx = np.zeros((len(err),) + err[0].shape)
         dc_dgamma = np.zeros(self.filters)
         dc_dbeta = np.zeros(self.filters)
         for f in range(self.filters):

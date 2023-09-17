@@ -23,24 +23,19 @@ class ResidualBlock(AbstractNet):
     def feedforward(self, in_activations):
         self.__in_a = in_activations
         z1 = nn_ext.correlate_all(in_activations, self.kernels1, False)
-        self.__a1 = [np.maximum(z1_hat, 0) for z1_hat in self.bn1.feedforward(z1)]
+        self.__a1 = np.maximum(self.bn1.feedforward(z1), 0)
         z2 = nn_ext.correlate_all(self.__a1, self.kernels2, False)
-        z2_hat = self.bn2.feedforward(z2)
-        self.__a2 = []
-        for i in range(len(in_activations)):
-            self.__a2.append(np.maximum(z2_hat[i] + in_activations[i], 0))
+        self.__a2 = np.maximum(self.bn2.feedforward(z2) + in_activations, 0)
         return self.__a2
 
     def error(self, target):
         raise NotImplementedError()
 
     def backprop(self, dc_da2):
-        da2_dz2_hat = [self.__a2[i] > 0 for i in range(len(self.__a2))]
-        dc_dz2_hat = [np.multiply(dc_da2[i], da2_dz2_hat[i]) for i in range(len(self.__a2))]
+        dc_dz2_hat = np.multiply(dc_da2, self.__a2 > 0)
         dc_dz2 = self.bn2.backprop(dc_dz2_hat)
         dc_da1 = nn_ext.correlate_all(dc_dz2, self.kernels2, True)
-        da1_dz1_hat = [self.__a1[i] > 0 for i in range(len(self.__a1))]
-        dc_dz1_hat = [np.multiply(dc_da1[i], da1_dz1_hat[i]) for i in range(len(self.__a1))]
+        dc_dz1_hat = np.multiply(dc_da1, self.__a1 > 0)
         dc_dz1 = self.bn1.backprop(dc_dz1_hat)
         dc_da_prev = nn_ext.correlate_all(dc_dz1, self.kernels1, True) + dc_dz2_hat
         self.__update_params(dc_dz1, dc_dz2)

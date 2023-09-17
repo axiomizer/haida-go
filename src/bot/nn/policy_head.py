@@ -37,18 +37,13 @@ class PolicyHead(AbstractNet):
 
     def feedforward(self, in_activations):
         self.__in_a = in_activations
-        z = []
-        for in_a in in_activations:
-            in_shape = np.shape(in_a)
-            conv = np.zeros((self.l1_filters, in_shape[1], in_shape[2]))
-            for f in range(self.l1_filters):
-                conv[f] = sum([in_a[i] * self.kernels[i][f] for i in range(self.in_filters)])
-            z.append(conv)
-        self.__a1 = [np.maximum(z_hat, 0) for z_hat in self.bn.feedforward(z)]
-        self.__a2 = []
-        for i in range(len(in_activations)):
-            self.__a2.append(np.matmul(self.weights, self.__a1[i].flatten()) + self.biases)
-        self.__p = [self.__softmax(a) for a in self.__a2]
+        z = np.einsum('ijkl,jmno->imkl', in_activations, self.kernels)
+        self.__a1 = np.maximum(self.bn.feedforward(z), 0)
+        a1_flat = np.reshape(self.__a1, (len(self.__a1), np.prod(self.__a1.shape[1:])))
+        self.__a2 = np.einsum('ij,kj->ki', self.weights, a1_flat) + self.biases
+        self.__p = np.empty(self.__a2.shape, dtype=float)
+        for i in range(len(self.__a2)):
+            self.__p[i] = self.__softmax(self.__a2[i])
         return self.__p
 
     def loss(self, target):
@@ -65,18 +60,12 @@ class PolicyHead(AbstractNet):
         return dc_da2
 
     def backprop(self, dc_da2):
-        dc_da1_flat = [np.matmul(np.transpose(self.weights), dc_da2[i]) for i in range(len(self.__in_a))]
-        shape = (self.l1_filters, self.board_size, self.board_size)
-        dc_da1 = [np.reshape(dc_da1_flat[i], shape) for i in range(len(self.__in_a))]
-        da1_dz1_hat = [self.__a1[i] > 0 for i in range(len(self.__a1))]
-        dc_dz1_hat = [np.multiply(dc_da1[i], da1_dz1_hat[i]) for i in range(len(self.__a1))]
+        dc_da1_flat = np.einsum('kj,ik->ij', self.weights, dc_da2)
+        shape = (len(dc_da1_flat), self.l1_filters, self.board_size, self.board_size)
+        dc_da1 = np.reshape(dc_da1_flat, shape)
+        dc_dz1_hat = np.multiply(dc_da1, self.__a1 > 0)
         dc_dz1 = self.bn.backprop(dc_dz1_hat)
-        dc_da_prev = []
-        for i in range(len(self.__in_a)):
-            dc_da_prev_example = np.zeros((self.in_filters, self.board_size, self.board_size))
-            for f in range(self.in_filters):
-                dc_da_prev_example[f] = sum([dc_dz1[i][fp] * self.kernels[f][fp] for fp in range(self.l1_filters)])
-            dc_da_prev.append(dc_da_prev_example)
+        dc_da_prev = np.einsum('ijkl,mjno->imkl', dc_dz1, self.kernels)
         self.__update_layer2_params(dc_da2)
         self.__update_layer1_params(dc_dz1)
         return dc_da_prev
